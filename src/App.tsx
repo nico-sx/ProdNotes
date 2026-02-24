@@ -9,22 +9,135 @@ import {
   CreditCard, Wallet, Bold, Italic, List
 } from 'lucide-react';
 
+// === 顏色工具函數 ===
+const hexToHsl = (hex: string) => {
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex.substring(1, 3), 16);
+    g = parseInt(hex.substring(3, 5), 16);
+    b = parseInt(hex.substring(5, 7), 16);
+  }
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 };
+};
+
+const getColorGroup = (hex: string) => {
+  const { h, s, l } = hexToHsl(hex);
+  if (l < 15) return 'Black';
+  if (l > 85) return 'White';
+  if (s < 15) return 'Gray';
+
+  if (h < 15) return 'Red';
+  if (h < 35) return 'Red-Orange';
+  if (h < 50) return 'Orange';
+  if (h < 65) return 'Orange-Yellow';
+  if (h < 85) return 'Yellow';
+  if (h < 110) return 'Yellow-Green';
+  if (h < 150) return 'Green';
+  if (h < 170) return 'Green-Cyan';
+  if (h < 195) return 'Cyan';
+  if (h < 215) return 'Cyan-Blue';
+  if (h < 245) return 'Blue';
+  if (h < 270) return 'Blue-Purple';
+  if (h < 295) return 'Purple';
+  if (h < 320) return 'Purple-Pink';
+  if (h < 340) return 'Pink';
+  if (h < 360) return 'Pink-Red';
+  return 'Red';
+};
+
+const groupToHex: Record<string, string> = {
+  'Red': '#ef4444',
+  'Red-Orange': '#f97316',
+  'Orange': '#f59e0b',
+  'Orange-Yellow': '#fbbf24',
+  'Yellow': '#eab308',
+  'Yellow-Green': '#84cc16',
+  'Green': '#22c55e',
+  'Green-Cyan': '#10b981',
+  'Cyan': '#06b6d4',
+  'Cyan-Blue': '#0ea5e9',
+  'Blue': '#3b82f6',
+  'Blue-Purple': '#6366f1',
+  'Purple': '#8b5cf6',
+  'Purple-Pink': '#a855f7',
+  'Pink': '#ec4899',
+  'Pink-Red': '#f43f5e',
+  'Black': '#000000',
+  'Gray': '#6b7280',
+  'White': '#ffffff'
+};
+
+const extractColorsFromImage = (imageUrl: string): Promise<string[]> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.src = imageUrl;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve([]);
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      
+      const points = [
+        [Math.floor(img.width / 2), Math.floor(img.height / 2)],
+        [Math.floor(img.width / 4), Math.floor(img.height / 4)],
+        [Math.floor(img.width * 3 / 4), Math.floor(img.height * 3 / 4)],
+        [Math.floor(img.width / 4), Math.floor(img.height * 3 / 4)],
+        [Math.floor(img.width * 3 / 4), Math.floor(img.height / 4)],
+      ];
+      
+      const hexes: string[] = [];
+      points.forEach(([x, y]) => {
+        try {
+          const data = ctx.getImageData(x, y, 1, 1).data;
+          const hex = "#" + ((1 << 24) + (data[0] << 16) + (data[1] << 8) + data[2]).toString(16).slice(1);
+          hexes.push(hex);
+        } catch (e) {
+          // Ignore cross-origin errors if any
+        }
+      });
+      
+      resolve(Array.from(new Set(hexes)));
+    };
+    img.onerror = () => resolve([]);
+  });
+};
+
 // === 模擬數據定義 ===
 const categories = [
-  { name: 'All', icon: LayoutGrid, count: 5745 },
-  { name: 'Music', icon: Music, count: 169 },
-  { name: 'Food & Drink', icon: Coffee, count: 248 },
-  { name: 'Travel', icon: Plane, count: 286 },
-  { name: 'Entertainment', icon: Film, count: 659 },
-  { name: 'Productivity', icon: Briefcase, count: 916 },
-  { name: 'Health & Fitness', icon: HeartPulse, count: 750 },
-  { name: 'Reference', icon: Book, count: 137 },
-  { name: 'Utilities', icon: Wrench, count: 1019 },
-  { name: 'Business', icon: Building2, count: 727 },
-  { name: 'Social Networking', icon: Users, count: 570 },
-  { name: 'Games', icon: Gamepad2, count: 73 },
-  { name: 'Shopping', icon: ShoppingBag, count: 470 },
-  { name: 'Lifestyle', icon: Shirt, count: 1457 },
+  { name: 'All', icon: LayoutGrid },
+  { name: 'Music', icon: Music },
+  { name: 'Food & Drink', icon: Coffee },
+  { name: 'Travel', icon: Plane },
+  { name: 'Entertainment', icon: Film },
+  { name: 'Productivity', icon: Briefcase },
+  { name: 'Health & Fitness', icon: HeartPulse },
+  { name: 'Reference', icon: Book },
+  { name: 'Utilities', icon: Wrench },
+  { name: 'Business', icon: Building2 },
+  { name: 'Social Networking', icon: Users },
+  { name: 'Games', icon: Gamepad2 },
+  { name: 'Shopping', icon: ShoppingBag },
+  { name: 'Lifestyle', icon: Shirt },
 ];
 
 const colors = [
@@ -51,48 +164,76 @@ const initialApps = [
     description: 'Next-generation calendar for professionals and teams.',
     tags: ['Calendar', 'Startup', 'SaaS', 'Workflow'],
     downloadsNum: 85200, downloadsText: '85.2 Thousand', rating: '4.9',
-    icon: Calendar, colorIds: [4, 5, 6], bg: 'bg-gradient-to-br from-blue-400 to-indigo-600',
+    icon: Calendar, hexColors: ['#60a5fa', '#6366f1'], bg: 'bg-gradient-to-br from-blue-400 to-indigo-600',
     starred: true, releaseDate: '2021-01-15', ageText: '3Y 2M', isPro: true,
     features: [
       { id: '1', title: 'Lightning Command Menu', description: 'Quickly perform any action with simple keyboard shortcuts and a unified search interface.', aspectRatio: '1:1', image: null },
       { id: '2', title: 'Ecosystem Integration', description: 'Seamlessly connect with Google Calendar, Outlook, Notion, and major video conferencing tools.', aspectRatio: '1:1', image: null }
-    ]
+    ],
+    businessModel: {
+      description: 'Cron follows a Freemium model. Basic features are free for individuals, while advanced team features require a subscription.',
+      tiers: [
+        { id: '1', name: 'Free', price: '0', cycle: 'forever', benefits: 'Up to 3 calendars\nBasic integrations\nStandard support' },
+        { id: '2', name: 'Pro', price: '9.99', cycle: 'per month', benefits: 'Unlimited calendars\nAdvanced integrations\nPriority support\nTeam collaboration' }
+      ]
+    }
   },
   {
     id: 2, name: 'Notion', category: 'Productivity',
     description: 'The all-in-one workspace for your notes, tasks, wikis, and databases.',
     tags: ['Notes', 'Wiki', 'Collaboration'],
     downloadsNum: 150000000, downloadsText: '150.0 B', rating: '4.9',
-    icon: PenLine, colorIds: [12, 13, 14], bg: 'bg-black',
+    icon: PenLine, hexColors: ['#000000', '#6b7280', '#ffffff'], bg: 'bg-black',
     starred: true, releaseDate: '2016-03-01', ageText: '8Y 1M', isPro: false,
     features: [
       { id: '1', title: 'All-in-one Workspace', description: 'Write, plan, collaborate, and get organized. Notion is all you need — in one tool.', aspectRatio: '1:1', image: null },
       { id: '2', title: 'Infinite Customization', description: 'Build your own workflow with drag-and-drop blocks. Create the perfect workspace for you.', aspectRatio: '1:1', image: null }
-    ]
+    ],
+    businessModel: {
+      description: 'Notion is free for individuals. Teams can upgrade for advanced collaboration and admin tools.',
+      tiers: [
+        { id: '1', name: 'Personal', price: '0', cycle: 'forever', benefits: 'Unlimited pages\nShare with 5 guests\nSync across devices' },
+        { id: '2', name: 'Plus', price: '8', cycle: 'per month', benefits: 'Unlimited blocks for teams\nUnlimited file uploads\n30-day page history' }
+      ]
+    }
   },
   {
     id: 3, name: 'Sparkles', category: 'Entertainment',
     description: 'Add magic to your daily photos with AI-powered sparkles.',
     tags: ['AI', 'Photo', 'Social'],
     downloadsNum: 100200000, downloadsText: '100.2 M', rating: '4.8',
-    icon: Sparkles, colorIds: [6, 7, 8], bg: 'bg-gradient-to-br from-purple-500 to-indigo-600',
+    icon: Sparkles, hexColors: ['#8b5cf6', '#6366f1', '#ec4899'], bg: 'bg-gradient-to-br from-purple-500 to-indigo-600',
     starred: true, releaseDate: '2023-11-20', ageText: '4M', isPro: false,
     features: [
       { id: '1', title: 'AI Magic Sparkles', description: 'Automatically detect and enhance photos with magical AI-powered sparkle effects.', aspectRatio: '1:1', image: null },
       { id: '2', title: 'Instant Sharing', description: 'Share your magical creations instantly with friends on all major social platforms.', aspectRatio: '1:1', image: null }
-    ]
+    ],
+    businessModel: {
+      description: 'Sparkles is free to use with basic effects. Pro users get exclusive AI filters and high-res exports.',
+      tiers: [
+        { id: '1', name: 'Basic', price: '0', cycle: 'forever', benefits: 'Standard AI filters\nSD exports\nAd-supported' },
+        { id: '2', name: 'Premium', price: '4.99', cycle: 'per month', benefits: 'Exclusive Pro filters\n4K exports\nNo ads\nEarly access' }
+      ]
+    }
   },
   {
     id: 4, name: 'Zapier', category: 'Utilities',
     description: 'Automate your workflows by connecting your favorite apps.',
     tags: ['Automation', 'No-code'],
     downloadsNum: 50000, downloadsText: '50.0 K', rating: '4.7',
-    icon: Zap, colorIds: [0, 1, 2], bg: 'bg-gradient-to-br from-rose-400 to-orange-500',
+    icon: Zap, hexColors: ['#f59e0b', '#fbbf24', '#f97316'], bg: 'bg-gradient-to-br from-rose-400 to-orange-500',
     starred: false, releaseDate: '2012-08-01', ageText: '11Y 6M', isPro: true,
     features: [
       { id: '1', title: 'Workflow Automation', description: 'Connect over 5,000 apps and automate your repetitive tasks without writing any code.', aspectRatio: '1:1', image: null },
       { id: '2', title: 'Multi-step Zaps', description: 'Create complex workflows that handle multiple tasks across different apps in a single run.', aspectRatio: '1:1', image: null }
-    ]
+    ],
+    businessModel: {
+      description: 'Zapier offers a free plan for basic automation. Paid plans unlock multi-step Zaps and premium apps.',
+      tiers: [
+        { id: '1', name: 'Free', price: '0', cycle: 'forever', benefits: '100 tasks/mo\nSingle-step Zaps\n15-min update time' },
+        { id: '2', name: 'Starter', price: '19.99', cycle: 'per month', benefits: '750 tasks/mo\nMulti-step Zaps\n3 premium apps' }
+      ]
+    }
   }
 ];
 
@@ -102,17 +243,22 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeColorGroups, setActiveColorGroups] = useState<string[]>([]);
+  const [isColorExpanded, setIsColorExpanded] = useState(false);
   const [activeYear, setActiveYear] = useState<number | null>(null);
   const [activeMonth, setActiveMonth] = useState<number | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [sortOption, setSortOption] = useState('date-desc');
-  const [activeTab, setActiveTab] = useState<'all' | 'collections' | 'subscription'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'categories' | 'collections' | 'subscription'>('all');
   const [categoriesList, setCategoriesList] = useState(categories);
+  const [collectionsList, setCollectionsList] = useState<any[]>([]);
+  const [categorySortOption, setCategorySortOption] = useState('name-asc');
+  const [collectionSortOption, setCollectionSortOption] = useState('name-asc');
 
   // 彈窗狀態
   const [selectedApp, setSelectedApp] = useState<any>(null); // 詳情彈窗
   const [isAddingNew, setIsAddingNew] = useState(false); // 新增彈窗
-  const [newAppColors, setNewAppColors] = useState<number[]>([]); // 新增 App 時選中的顏色
+  const [newAppColors, setNewAppColors] = useState<number[]>([]); // 新增 App 時選中的顏色 (Legacy)
+  const [newAppHexColors, setNewAppHexColors] = useState<string[]>([]); // 新增 App 時提取的顏色
   const [isExtractingColors, setIsExtractingColors] = useState(false); // 是否正在模擬提取顏色
 
   // 新增 App 表單狀態
@@ -135,8 +281,40 @@ export default function App() {
     description: string;
     tiers: any[];
   }>({ description: '', tiers: [] }); // 商業模式
+  const [editingTierIndex, setEditingTierIndex] = useState<number | null>(null);
+  const [tierForm, setTierForm] = useState({ name: '', price: '', currency: '$', cycle: 'per month', benefits: '' });
+  const currencies = [
+    { symbol: '$', name: 'USD' },
+    { symbol: '€', name: 'EUR' },
+    { symbol: '£', name: 'GBP' },
+    { symbol: '¥', name: 'JPY' },
+    { symbol: '₹', name: 'INR' },
+    { symbol: '₩', name: 'KRW' },
+    { symbol: 'A$', name: 'AUD' },
+    { symbol: 'C$', name: 'CAD' },
+    { symbol: 'R$', name: 'BRL' },
+    { symbol: '₽', name: 'RUB' },
+    { symbol: '₺', name: 'TRY' },
+    { symbol: '฿', name: 'THB' },
+    { symbol: '₫', name: 'VND' },
+    { symbol: '₱', name: 'PHP' },
+    { symbol: 'S$', name: 'SGD' },
+    { symbol: 'HK$', name: 'HKD' },
+    { symbol: 'NT$', name: 'TWD' },
+    { symbol: '₪', name: 'ILS' },
+    { symbol: 'zł', name: 'PLN' },
+    { symbol: 'Kč', name: 'CZK' },
+    { symbol: 'Ft', name: 'HUF' },
+    { symbol: 'kr', name: 'SEK/NOK/DKK' },
+    { symbol: 'RM', name: 'MYR' },
+    { symbol: 'Rp', name: 'IDR' },
+    { symbol: '₦', name: 'NGN' },
+    { symbol: 'KSh', name: 'KES' },
+    { symbol: 'R', name: 'ZAR' },
+  ];
   const [viewingFullPageApp, setViewingFullPageApp] = useState<any>(null); // 全屏詳情頁
   const [editingCategory, setEditingCategory] = useState<any>(null); // 正在編輯的分類
+  const [previewingGroup, setPreviewingGroup] = useState<any>(null); // 正在預覽的分類/組合
   const [isAddingCategory, setIsAddingCategory] = useState(false); // 是否正在新增分類
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState<any>(LayoutGrid);
@@ -148,25 +326,45 @@ export default function App() {
   const [editingApp, setEditingApp] = useState<any>(null); // 正在編輯的 App
   const [appToDelete, setAppToDelete] = useState<any>(null); // 準備刪除的 App
 
-  // 處理分類 CRUD
-  const handleAddCategory = () => {
+  // 計算每個分類/組合下的應用數量
+  const groupCounts = useMemo(() => {
+    const counts: Record<string, number> = { All: apps.length };
+    apps.forEach(app => {
+      if (app.category) {
+        counts[app.category] = (counts[app.category] || 0) + 1;
+      }
+      if (app.collection) {
+        counts[`col_${app.collection}`] = (counts[`col_${app.collection}`] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [apps]);
+
+  // 處理分類/組合 CRUD
+  const handleAddGroup = () => {
     if (!newCategoryName.trim()) return;
-    const newCat = {
+    const newGroup = {
       name: newCategoryName,
-      icon: newCategoryIcon,
-      count: selectedAppIdsForCategory.length
+      icon: newCategoryIcon
     };
 
-    // 更新 App 的分類
+    const isCollection = activeTab === 'collections';
+
+    // 更新 App 的分類/組合
     if (selectedAppIdsForCategory.length > 0) {
       setApps(apps.map(app => 
         selectedAppIdsForCategory.includes(app.id) 
-          ? { ...app, category: newCategoryName } 
+          ? { ...app, [isCollection ? 'collection' : 'category']: newCategoryName } 
           : app
       ));
     }
 
-    setCategoriesList([...categoriesList, newCat]);
+    if (isCollection) {
+      setCollectionsList([...collectionsList, newGroup]);
+    } else {
+      setCategoriesList([...categoriesList, newGroup]);
+    }
+    
     setIsAddingCategory(false);
     setNewCategoryName('');
     setNewCategoryIcon(LayoutGrid);
@@ -174,32 +372,48 @@ export default function App() {
     setCategoryAppSearchQuery('');
   };
 
-  const handleUpdateCategory = () => {
+  const handleUpdateGroup = () => {
     if (!editingCategory || !newCategoryName.trim()) return;
     
-    // 更新 App 的分類 (如果分類名稱改變)
+    const isCollection = activeTab === 'collections';
+    const field = isCollection ? 'collection' : 'category';
+
+    // 更新 App 的分類/組合 (如果名稱改變)
     if (editingCategory.name !== newCategoryName) {
       setApps(apps.map(app => 
-        app.category === editingCategory.name 
-          ? { ...app, category: newCategoryName } 
+        app[field] === editingCategory.name 
+          ? { ...app, [field]: newCategoryName } 
           : app
       ));
     }
 
-    // 更新選中的 App 分類
+    // 更新選中的 App 分類/組合 (包含取消選中的)
     setApps(prevApps => prevApps.map(app => {
       if (selectedAppIdsForCategory.includes(app.id)) {
-        return { ...app, category: newCategoryName };
+        return { ...app, [field]: newCategoryName };
+      } else if (app[field] === editingCategory.name) {
+        // 如果原本在這個分類/組合中，但現在沒被選中，則清除
+        return { ...app, [field]: undefined };
       }
       return app;
     }));
 
-    const updatedList = categoriesList.map(cat => 
-      cat.name === editingCategory.name 
-        ? { ...cat, name: newCategoryName, icon: newCategoryIcon, count: selectedAppIdsForCategory.length }
-        : cat
-    );
-    setCategoriesList(updatedList);
+    if (isCollection) {
+      const updatedList = collectionsList.map(cat => 
+        cat.name === editingCategory.name 
+          ? { ...cat, name: newCategoryName, icon: newCategoryIcon }
+          : cat
+      );
+      setCollectionsList(updatedList);
+    } else {
+      const updatedList = categoriesList.map(cat => 
+        cat.name === editingCategory.name 
+          ? { ...cat, name: newCategoryName, icon: newCategoryIcon }
+          : cat
+      );
+      setCategoriesList(updatedList);
+    }
+    
     setEditingCategory(null);
     setNewCategoryName('');
     setNewCategoryIcon(LayoutGrid);
@@ -239,10 +453,26 @@ export default function App() {
     }
   };
 
-  const handleDeleteCategory = (name: string) => {
-    setCategoriesList(categoriesList.filter(cat => cat.name !== name));
+  const handleDeleteGroup = (name: string) => {
+    const isCollection = activeTab === 'collections';
+    if (isCollection) {
+      setCollectionsList(collectionsList.filter(c => c.name !== name));
+    } else {
+      setCategoriesList(categoriesList.filter(c => c.name !== name));
+    }
     if (activeCategory === name) setActiveCategory('All');
   };
+
+  const sortedGroups = useMemo(() => {
+    const list = activeTab === 'collections' ? collectionsList : categoriesList;
+    const sortOption = activeTab === 'collections' ? collectionSortOption : categorySortOption;
+    
+    return [...list].sort((a, b) => {
+      if (sortOption === 'name-asc') return a.name.localeCompare(b.name);
+      if (sortOption === 'name-desc') return b.name.localeCompare(a.name);
+      return 0;
+    });
+  }, [activeTab, categoriesList, collectionsList, categorySortOption, collectionSortOption]);
 
   const maxApps = 500;
 
@@ -256,14 +486,11 @@ export default function App() {
       );
     }
     if (activeCategory !== 'All') {
-      result = result.filter(app => app.category === activeCategory);
+      result = result.filter(app => app.category === activeCategory || app.collection === activeCategory);
     }
     if (activeColorGroups.length > 0) {
       result = result.filter(app => 
-        app.colorIds && app.colorIds.some(id => {
-          const color = colors.find(c => c.id === id);
-          return color && activeColorGroups.includes(color.group);
-        })
+        (app.hexColors || []).some(hex => activeColorGroups.includes(getColorGroup(hex)))
       );
     }
     if (activeYear !== null) {
@@ -496,12 +723,12 @@ export default function App() {
               <div className="relative z-10">
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center">
-                    <Layers className="w-6 h-6 text-indigo-400" />
+                    <Wallet className="w-6 h-6 text-indigo-400" />
                   </div>
                   <h3 className="text-2xl font-black tracking-tight">Business Model</h3>
                 </div>
                 <p className="text-sm text-gray-400 leading-relaxed mb-12 font-medium max-w-2xl">
-                  Lumina follows a <span className="text-white font-bold">Freemium</span> model. Basic tools and 5 projects are available for free. The Pro subscription ($9.99/mo) unlocks unlimited projects, cloud storage, advanced export formats (SVG, EPS, PDF), and collaboration tools.
+                  {app.businessModel?.description || 'No business model description provided.'}
                 </p>
                 
                 <div className="space-y-6">
@@ -509,41 +736,31 @@ export default function App() {
                     <Building2 className="w-4 h-4" /> Subscription Plans
                   </div>
                   <div className="grid grid-cols-2 gap-8">
-                    {/* Free Plan */}
-                    <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-10">
-                      <div className="mb-8">
-                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Free Plan</span>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-4xl font-black">$0</span>
-                          <span className="text-xs text-gray-500 font-bold">/forever</span>
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        {['Up to 5 active projects', 'Basic vector toolset', 'Standard PNG/JPG export'].map((item, i) => (
-                          <div key={i} className="flex items-center gap-3 text-xs text-gray-300 font-medium">
-                            <CheckCircle2 className="w-4 h-4 text-indigo-500" /> {item}
+                    {app.businessModel?.tiers && app.businessModel.tiers.length > 0 ? (
+                      app.businessModel.tiers.map((tier: any, i: number) => (
+                        <div key={i} className="bg-white/5 border border-white/10 rounded-[2.5rem] p-10 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full -mr-16 -mt-16"></div>
+                          <div className="mb-8">
+                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 block">{tier.name}</span>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-4xl font-black">{tier.currency || '$'}{tier.price}</span>
+                              <span className="text-xs text-gray-500 font-bold">/{tier.cycle}</span>
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Pro Plan */}
-                    <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-10 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full -mr-16 -mt-16"></div>
-                      <div className="mb-8">
-                        <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 block">Pro Plan</span>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-4xl font-black">$9.99</span>
-                          <span className="text-xs text-gray-500 font-bold">/mo</span>
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        {['Unlimited projects', 'Advanced formats (SVG, EPS, PDF)', 'Real-time cloud collaboration', 'Priority support'].map((item, i) => (
-                          <div key={i} className="flex items-center gap-3 text-xs text-gray-300 font-medium">
-                            <CheckCircle2 className="w-4 h-4 text-indigo-500" /> {item}
+                          <div className="space-y-4">
+                            {tier.benefits.split('\n').filter((b: string) => b.trim()).map((item: string, j: number) => (
+                              <div key={j} className="flex items-center gap-3 text-xs text-gray-300 font-medium">
+                                <CheckCircle2 className="w-4 h-4 text-indigo-500" /> {item}
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-2 bg-white/5 border border-white/10 border-dashed rounded-[2.5rem] p-10 text-center text-gray-500 font-bold">
+                        No subscription plans added yet.
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -664,10 +881,16 @@ export default function App() {
           >
             <Layers className={`w-4 h-4 ${activeTab === 'collections' ? 'text-indigo-600' : ''}`} /> Collections
           </button>
+          <button 
+            onClick={() => setActiveTab('categories')}
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors w-full text-left text-sm font-medium ${activeTab === 'categories' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-500 hover:bg-gray-50'}`}
+          >
+            <LayoutGrid className={`w-4 h-4 ${activeTab === 'categories' ? 'text-indigo-600' : ''}`} /> Categories
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-0.5 custom-scrollbar">
-          {categoriesList.map((cat) => (
+          {(activeTab === 'collections' ? collectionsList : categoriesList).filter(cat => cat.name === 'All' || (groupCounts[cat.name] || 0) > 0 || (activeTab === 'collections' && (groupCounts[`col_${cat.name}`] || 0) > 0)).map((cat) => (
             <button
               key={cat.name}
               onClick={() => {
@@ -682,7 +905,7 @@ export default function App() {
                 <span>{cat.name}</span>
               </div>
               <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] text-gray-400 font-bold min-w-[30px] text-center">
-                {cat.count}
+                {activeTab === 'collections' ? (groupCounts[`col_${cat.name}`] || 0) : (groupCounts[cat.name] || 0)}
               </span>
             </button>
           ))}
@@ -758,29 +981,55 @@ export default function App() {
 
             {/* 顏色過濾器 */}
             <div className="flex items-center gap-4 mb-10">
-              <div className="bg-white rounded-full px-6 py-4 shadow-sm flex items-center gap-4 border border-gray-100/50 flex-1">
-                <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">Color</span>
-                <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-1">
-                  {/* 按組別合併顏色，並按順序排列 */}
-                  {['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'indigo', 'purple', 'pink', 'black', 'gray', 'white']
-                    .filter(groupName => apps.some(app => app.colorIds?.some(id => colors.find(c => c.id === id)?.group === groupName)))
-                    .map((groupName) => {
-                      const representativeColor = colors.find(c => c.group === groupName);
-                      if (!representativeColor) return null;
-                      return (
-                        <button
-                          key={groupName}
-                          onClick={() => {
-                            if (activeColorGroups.includes(groupName)) {
-                              setActiveColorGroups(activeColorGroups.filter(g => g !== groupName));
-                            } else {
-                              setActiveColorGroups([...activeColorGroups, groupName]);
-                            }
-                          }}
-                          className={`w-4 h-4 rounded-full transition-all flex-shrink-0 ${representativeColor.class} ${activeColorGroups.includes(groupName) ? 'ring-2 ring-offset-2 ring-gray-300 scale-110' : 'hover:scale-125'}`}
-                        />
-                      );
-                    })}
+              <div className="bg-white rounded-[2rem] px-6 py-4 shadow-sm flex flex-col gap-4 border border-gray-100/50 flex-1 transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">Color</span>
+                    <div className="flex items-center gap-3">
+                      {/* 動態計算所有 App 使用到的顏色組 */}
+                      {(() => {
+                        const usedGroups = Array.from(new Set(apps.flatMap(app => 
+                          (app.hexColors || []).map(hex => getColorGroup(hex as string))
+                        ))) as string[];
+                        
+                        // 排序：按照 groupToHex 的順序
+                        const groupOrder = Object.keys(groupToHex);
+                        const sortedGroups = usedGroups.sort((a, b) => groupOrder.indexOf(a as string) - groupOrder.indexOf(b as string));
+                        
+                        const visibleGroups = isColorExpanded ? sortedGroups : sortedGroups.slice(0, 12);
+                        
+                        return (
+                          <div className="flex flex-wrap items-center gap-3">
+                            {visibleGroups.map((groupName) => (
+                              <button
+                                key={groupName}
+                                onClick={() => {
+                                  if (activeColorGroups.includes(groupName)) {
+                                    setActiveColorGroups(activeColorGroups.filter(g => g !== groupName));
+                                  } else {
+                                    setActiveColorGroups([...activeColorGroups, groupName]);
+                                  }
+                                }}
+                                title={groupName}
+                                className={`w-4 h-4 rounded-full transition-all flex-shrink-0 ${activeColorGroups.includes(groupName) ? 'ring-2 ring-offset-2 ring-gray-300 scale-110' : 'hover:scale-125'}`}
+                                style={{ backgroundColor: groupToHex[groupName as string] }}
+                              />
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  
+                  {/* 展開按鈕 */}
+                  {Array.from(new Set(apps.flatMap(app => (app.hexColors || []).map(hex => getColorGroup(hex))))).length > 12 && (
+                    <button 
+                      onClick={() => setIsColorExpanded(!isColorExpanded)}
+                      className="text-gray-400 hover:text-indigo-600 transition-colors"
+                    >
+                      <ChevronDown className={`w-4 h-4 transition-transform ${isColorExpanded ? 'rotate-180' : ''}`} />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -851,19 +1100,29 @@ export default function App() {
               ))}
             </div>
           </>
-        ) : activeTab === 'collections' ? (
+        ) : (activeTab === 'categories' || activeTab === 'collections') ? (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-start justify-between mb-12">
               <div>
-                <h2 className="text-4xl font-black text-gray-900 mb-3 tracking-tight">Manage Categories</h2>
+                <h2 className="text-4xl font-black text-gray-900 mb-3 tracking-tight">Manage {activeTab === 'categories' ? 'Categories' : 'Collections'}</h2>
                 <p className="text-sm text-gray-400 font-bold uppercase tracking-widest">Organize your application groups</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="bg-white rounded-2xl px-6 py-3 shadow-sm border border-gray-100/50 flex items-center gap-3">
                   <span className="text-xs font-bold text-gray-400 uppercase">Sort</span>
-                  <div className="flex items-center gap-2 text-sm font-black text-gray-900 cursor-pointer">
-                    A-Z <ChevronDown className="w-4 h-4" />
-                  </div>
+                  <button 
+                    onClick={() => {
+                      if (activeTab === 'categories') {
+                        setCategorySortOption(categorySortOption === 'name-asc' ? 'name-desc' : 'name-asc');
+                      } else {
+                        setCollectionSortOption(collectionSortOption === 'name-asc' ? 'name-desc' : 'name-asc');
+                      }
+                    }}
+                    className="flex items-center gap-2 text-sm font-black text-gray-900 hover:text-indigo-600 transition-colors"
+                  >
+                    {(activeTab === 'categories' ? categorySortOption : collectionSortOption) === 'name-asc' ? 'A-Z' : 'Z-A'}
+                    <ChevronDown className={`w-4 h-4 transition-transform ${(activeTab === 'categories' ? categorySortOption : collectionSortOption) === 'name-desc' ? 'rotate-180' : ''}`} />
+                  </button>
                 </div>
                 <button 
                   onClick={() => {
@@ -871,18 +1130,23 @@ export default function App() {
                     setNewCategoryName('');
                     setNewCategoryIcon(LayoutGrid);
                     setCategoryAppSearchQuery('');
+                    setSelectedAppIdsForCategory([]);
                   }}
                   className="bg-indigo-600 text-white px-8 h-14 rounded-2xl shadow-lg shadow-indigo-200 flex items-center gap-3 text-sm font-bold hover:bg-indigo-700 transition-all active:scale-95"
                 >
-                  <Plus className="w-5 h-5" strokeWidth={3} /> Add Group
+                  <Plus className="w-5 h-5" strokeWidth={3} /> Add {activeTab === 'categories' ? 'Category' : 'Collection'}
                 </button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {categoriesList.map((cat) => (
-                <div key={cat.name} className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100/50 group hover:shadow-xl transition-all duration-300 relative overflow-hidden">
-                  <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              {sortedGroups.map((cat) => (
+                <div 
+                  key={cat.name} 
+                  onClick={() => setPreviewingGroup(cat)}
+                  className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100/50 group hover:shadow-xl transition-all duration-300 relative overflow-hidden cursor-pointer"
+                >
+                  <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -890,8 +1154,9 @@ export default function App() {
                         setNewCategoryName(cat.name);
                         setNewCategoryIcon(cat.icon);
                         setCategoryAppSearchQuery('');
-                        // 找出屬於該分類的 App ID
-                        const appIds = apps.filter(a => a.category === cat.name).map(a => a.id);
+                        // 找出屬於該分類/組合的 App ID
+                        const field = activeTab === 'collections' ? 'collection' : 'category';
+                        const appIds = apps.filter(a => a[field] === cat.name).map(a => a.id);
                         setSelectedAppIdsForCategory(appIds);
                       }}
                       className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
@@ -901,7 +1166,7 @@ export default function App() {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteCategory(cat.name);
+                        handleDeleteGroup(cat.name);
                       }}
                       className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                     >
@@ -915,13 +1180,20 @@ export default function App() {
                   
                   <h3 className="text-xl font-black text-gray-900 mb-2">{cat.name}</h3>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-400 font-bold">{cat.count} Apps</span>
+                    <span className="text-sm text-gray-400 font-bold">
+                      {activeTab === 'collections' ? (groupCounts[`col_${cat.name}`] || 0) : (groupCounts[cat.name] || 0)} Apps
+                    </span>
                     <div className="flex -space-x-2">
-                      {[1, 2, 3].map(i => (
-                        <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-gray-100 overflow-hidden">
-                          <img src={`https://picsum.photos/seed/${cat.name}${i}/40/40`} alt="" referrerPolicy="no-referrer" />
+                      {apps.filter(a => (activeTab === 'collections' ? a.collection : a.category) === cat.name).slice(0, 4).map((app, i) => (
+                        <div key={app.id} className={`w-7 h-7 rounded-lg border-2 border-white flex items-center justify-center text-white text-[8px] font-bold ${app.bg} shadow-sm`}>
+                          <app.icon className="w-3.5 h-3.5" />
                         </div>
                       ))}
+                      {(activeTab === 'collections' ? (groupCounts[`col_${cat.name}`] || 0) : (groupCounts[cat.name] || 0)) > 4 && (
+                        <div className="w-7 h-7 rounded-lg border-2 border-white bg-gray-100 flex items-center justify-center text-[8px] font-black text-gray-400">
+                          +{(activeTab === 'collections' ? (groupCounts[`col_${cat.name}`] || 0) : (groupCounts[cat.name] || 0)) - 4}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -973,14 +1245,13 @@ export default function App() {
                         const file = e.target.files[0];
                         if (file) {
                           const reader = new FileReader();
-                          reader.onload = (event: any) => {
-                            setNewAppLogo(event.target.result);
+                          reader.onload = async (event: any) => {
+                            const logoUrl = event.target.result;
+                            setNewAppLogo(logoUrl);
                             setIsExtractingColors(true);
-                            setTimeout(() => {
-                              const randomColors = [...colors].sort(() => 0.5 - Math.random()).slice(0, 4).map(c => c.id);
-                              setNewAppColors(randomColors);
-                              setIsExtractingColors(false);
-                            }, 1500);
+                            const extracted = await extractColorsFromImage(logoUrl);
+                            setNewAppHexColors(extracted);
+                            setIsExtractingColors(false);
                           };
                           reader.readAsDataURL(file);
                         }
@@ -1006,22 +1277,21 @@ export default function App() {
                     )}
                   </div>
                   {/* 顏色選擇 */}
-                  <div className="flex flex-wrap justify-center gap-2.5 max-w-[180px]">
-                    {colors.map(c => (
-                      <div 
-                        key={c.id} 
-                        onClick={() => {
-                          if (newAppColors.includes(c.id)) {
-                            setNewAppColors(newAppColors.filter(id => id !== c.id));
-                          } else if (newAppColors.length < 6) {
-                            setNewAppColors([...newAppColors, c.id]);
-                          }
-                        }}
-                        className={`w-5 h-5 rounded-full ${c.class} cursor-pointer transition-all ${newAppColors.includes(c.id) ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110' : 'opacity-40 hover:opacity-100 hover:scale-110'}`} 
-                      />
-                    ))}
-                  </div>
-                  <span className="text-[10px] font-bold text-gray-300 uppercase">Confirm Colors (Max 6)</span>
+                  {newAppLogo && (
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="flex flex-wrap justify-center gap-2.5 max-w-[180px]">
+                        {newAppHexColors.map((hex, idx) => (
+                          <div 
+                            key={idx} 
+                            title={getColorGroup(hex)}
+                            className={`w-6 h-6 rounded-full border-2 border-white shadow-sm cursor-pointer transition-all hover:scale-110`} 
+                            style={{ backgroundColor: hex }}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[10px] font-bold text-gray-300 uppercase">Extracted Colors</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* 輸入欄位 */}
@@ -1311,6 +1581,7 @@ export default function App() {
 
                 <div 
                   onClick={() => {
+                    if (newAppFeatures.length >= 50) return;
                     setNewAppFeatures([{
                       id: Date.now().toString(),
                       image: null,
@@ -1319,11 +1590,11 @@ export default function App() {
                       description: ''
                     }, ...newAppFeatures]);
                   }}
-                  className="w-full py-10 rounded-[2.5rem] bg-gray-50/50 border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-400 hover:bg-white hover:border-indigo-300 transition-all cursor-pointer group"
+                  className={`w-full py-10 rounded-[2.5rem] bg-gray-50/50 border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-400 hover:bg-white hover:border-indigo-300 transition-all cursor-pointer group ${newAppFeatures.length >= 50 ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="flex flex-col items-center gap-3">
                     <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform"><Plus className="w-5 h-5 text-indigo-500" /></div>
-                    <span className="text-[11px] font-black uppercase tracking-widest">Add New Feature Block</span>
+                    <span className="text-[11px] font-black uppercase tracking-widest">Add New Feature Block ({newAppFeatures.length}/50)</span>
                   </div>
                 </div>
 
@@ -1413,6 +1684,177 @@ export default function App() {
                 </Reorder.Group>
               </div>
 
+              {/* 第五部分：商業模式編輯 */}
+              <div className="space-y-6 pt-6 border-t border-gray-100">
+                <div className="flex items-center justify-between ml-4">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-indigo-500" />
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Business Model</label>
+                  </div>
+                  {newAppBusinessModel.tiers.length < 9 && editingTierIndex === null && (
+                    <button 
+                      onClick={() => {
+                        setEditingTierIndex(-1); // -1 means adding new
+                        setTierForm({ name: '', price: '', currency: '$', cycle: 'per month', benefits: '' });
+                      }}
+                      className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors"
+                    >
+                      <Plus className="w-3 h-3" /> Add New Tier
+                    </button>
+                  )}
+                </div>
+
+                <div className="bg-white border border-gray-100 rounded-[2.5rem] p-8 shadow-sm space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-bold text-gray-300 uppercase ml-2">Model Description</label>
+                    <textarea 
+                      value={newAppBusinessModel.description}
+                      onChange={(e) => setNewAppBusinessModel({ ...newAppBusinessModel, description: e.target.value })}
+                      placeholder="e.g. Lumina follows a Freemium model. Basic tools and 5 projects are available for free."
+                      className="w-full bg-gray-50 rounded-xl px-4 py-3 text-xs font-medium text-gray-500 outline-none resize-none h-20 border border-transparent focus:border-indigo-100 transition-all" 
+                    />
+                  </div>
+
+                  {editingTierIndex !== null && (
+                    <div className="bg-indigo-50/30 border border-indigo-100 rounded-[2rem] p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-indigo-400 uppercase ml-2">Tier Name</label>
+                        <input 
+                          type="text" 
+                          value={tierForm.name}
+                          onChange={(e) => setTierForm({ ...tierForm, name: e.target.value })}
+                          placeholder="e.g. Enterprise Plan"
+                          className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold text-gray-700 outline-none border border-indigo-100 focus:border-indigo-300 transition-all" 
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-indigo-400 uppercase ml-2">Price & Currency</label>
+                          <div className="flex gap-2">
+                            <select 
+                              value={tierForm.currency}
+                              onChange={(e) => setTierForm({ ...tierForm, currency: e.target.value })}
+                              className="w-24 bg-white rounded-xl px-3 py-3 text-sm font-bold text-gray-700 outline-none border border-indigo-100 focus:border-indigo-300 transition-all appearance-none cursor-pointer"
+                            >
+                              {currencies.map(c => (
+                                <option key={c.symbol} value={c.symbol}>{c.symbol} ({c.name})</option>
+                              ))}
+                            </select>
+                            <div className="relative flex-1">
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">{tierForm.currency}</span>
+                              <input 
+                                type="text" 
+                                value={tierForm.price}
+                                onChange={(e) => setTierForm({ ...tierForm, price: e.target.value })}
+                                placeholder="29.99"
+                                className="w-full bg-white rounded-xl pl-8 pr-4 py-3 text-sm font-bold text-gray-700 outline-none border border-indigo-100 focus:border-indigo-300 transition-all" 
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-indigo-400 uppercase ml-2">Billing Cycle</label>
+                          <select 
+                            value={tierForm.cycle}
+                            onChange={(e) => setTierForm({ ...tierForm, cycle: e.target.value })}
+                            className="w-full bg-white rounded-xl px-4 py-3 text-sm font-bold text-gray-700 outline-none border border-indigo-100 focus:border-indigo-300 transition-all appearance-none cursor-pointer"
+                          >
+                            <option value="per month">per month</option>
+                            <option value="per year">per year</option>
+                            <option value="forever">forever</option>
+                            <option value="one-time">one-time</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between ml-2">
+                          <label className="text-[9px] font-bold text-indigo-400 uppercase">Plan Benefits</label>
+                          <div className="flex gap-2">
+                            <Bold className="w-3 h-3 text-gray-400 cursor-pointer hover:text-indigo-500" />
+                            <Italic className="w-3 h-3 text-gray-400 cursor-pointer hover:text-indigo-500" />
+                            <List className="w-3 h-3 text-gray-400 cursor-pointer hover:text-indigo-500" />
+                          </div>
+                        </div>
+                        <textarea 
+                          value={tierForm.benefits}
+                          onChange={(e) => setTierForm({ ...tierForm, benefits: e.target.value })}
+                          placeholder="Enter plan benefits..."
+                          className="w-full bg-white rounded-xl px-4 py-3 text-xs font-medium text-gray-500 outline-none resize-none h-32 border border-indigo-100 focus:border-indigo-300 transition-all" 
+                        />
+                      </div>
+                      <div className="flex gap-3 pt-2">
+                        <button 
+                          onClick={() => setEditingTierIndex(null)}
+                          className="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 bg-white border border-gray-100 hover:bg-gray-50 transition-all"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (!tierForm.name) return;
+                            const updatedTiers = [...newAppBusinessModel.tiers];
+                            if (editingTierIndex === -1) {
+                              updatedTiers.push({ ...tierForm, id: Date.now().toString() });
+                            } else {
+                              updatedTiers[editingTierIndex] = { ...tierForm, id: updatedTiers[editingTierIndex].id };
+                            }
+                            setNewAppBusinessModel({ ...newAppBusinessModel, tiers: updatedTiers });
+                            setEditingTierIndex(null);
+                          }}
+                          className="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+                        >
+                          Save Changes
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {newAppBusinessModel.tiers.map((tier, tIdx) => (
+                      <div key={tier.id} className="bg-gray-50/50 border border-gray-100 rounded-2xl p-5 relative group">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">{tier.name}</p>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-xl font-black text-gray-900">{tier.currency || '$'}{tier.price}</span>
+                              <span className="text-[9px] text-gray-400 font-bold">/{tier.cycle}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => {
+                                setEditingTierIndex(tIdx);
+                                setTierForm({ ...tier });
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-indigo-500 transition-colors"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                const updatedTiers = newAppBusinessModel.tiers.filter((_, i) => i !== tIdx);
+                                setNewAppBusinessModel({ ...newAppBusinessModel, tiers: updatedTiers });
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          {tier.benefits.split('\n').filter((b: string) => b.trim()).map((benefit: string, bIdx: number) => (
+                            <div key={bIdx} className="flex items-center gap-2">
+                              <CheckCircle2 className="w-3 h-3 text-indigo-500" />
+                              <span className="text-[10px] text-gray-500 font-medium">{benefit}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
             </div>
 
             {/* 底部固定操作欄 */}
@@ -1435,8 +1877,8 @@ export default function App() {
                           tags: newAppTags,
                           downloadsNum: totalDownloadsValue,
                           downloadsText: totalDownloadsFormatted,
-                          colorIds: newAppColors,
-                          bg: newAppColors.length > 0 ? colors.find(c => c.id === newAppColors[0])?.class || 'bg-gray-900' : 'bg-gray-900',
+                          hexColors: newAppHexColors,
+                          bg: newAppHexColors.length > 0 ? `bg-[${newAppHexColors[0]}]` : 'bg-gray-900',
                           releaseDate: newAppReleaseDate,
                           platforms: newAppPlatforms,
                           logo: newAppLogo,
@@ -1462,8 +1904,8 @@ export default function App() {
                       downloadsText: totalDownloadsFormatted,
                       rating: newAppRating,
                       icon: LayoutGrid,
-                      colorIds: newAppColors,
-                      bg: newAppColors.length > 0 ? colors.find(c => c.id === newAppColors[0])?.class || 'bg-gray-900' : 'bg-gray-900',
+                      hexColors: newAppHexColors,
+                      bg: newAppHexColors.length > 0 ? `bg-[${newAppHexColors[0]}]` : 'bg-gray-900',
                       starred: false,
                       releaseDate: newAppReleaseDate,
                       ageText: 'New',
@@ -1484,7 +1926,7 @@ export default function App() {
                   setNewAppName('');
                   setNewAppSlogan('');
                   setNewAppTags([]);
-                  setNewAppColors([]);
+                  setNewAppHexColors([]);
                   setNewAppLogo(null);
                   setNewAppScreenshots([]);
                   setNewAppRating('4.5');
@@ -1615,33 +2057,43 @@ export default function App() {
                   <div className="bg-[#15162B] rounded-[2rem] p-8 text-white relative overflow-hidden">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                        <Layers className="w-5 h-5 text-indigo-400" />
+                        <Wallet className="w-5 h-5 text-indigo-400" />
                       </div>
                       <h3 className="text-lg font-black tracking-tight">Business Model</h3>
                     </div>
                     <p className="text-xs text-gray-400 leading-relaxed mb-8 font-medium">
-                      Lumina follows a <span className="text-white font-bold">Freemium</span> model. Basic tools and 5 projects are available for free. The Pro subscription ($9.99/mo) unlocks unlimited projects, cloud storage, advanced export formats (SVG, EPS, PDF), and collaboration tools.
+                      {selectedApp.businessModel?.description || 'No business model description provided.'}
                     </p>
                     
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">
                         <Building2 className="w-3 h-3" /> Subscription Plans
                       </div>
-                      <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                        <div className="flex items-baseline gap-2 mb-4">
-                          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Pro Plan</span>
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black">$9.99</span>
-                            <span className="text-[10px] text-gray-500 font-bold">/mo</span>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          {['Unlimited projects', 'Advanced formats (SVG, EPS, PDF)', 'Real-time cloud collaboration', 'Priority support'].map((item, i) => (
-                            <div key={i} className="flex items-center gap-2 text-[11px] text-gray-300 font-medium">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" /> {item}
+                      <div className="space-y-4">
+                        {selectedApp.businessModel?.tiers && selectedApp.businessModel.tiers.length > 0 ? (
+                          selectedApp.businessModel.tiers.map((tier: any, i: number) => (
+                            <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                              <div className="flex items-baseline gap-2 mb-4">
+                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{tier.name}</span>
+                                <div className="flex items-baseline gap-1">
+                                  <span className="text-2xl font-black">{tier.currency || '$'}{tier.price}</span>
+                                  <span className="text-[10px] text-gray-500 font-bold">/{tier.cycle}</span>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                {tier.benefits.split('\n').filter((b: string) => b.trim()).map((item: string, j: number) => (
+                                  <div key={j} className="flex items-center gap-2 text-[11px] text-gray-300 font-medium">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" /> {item}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          ))}
-                        </div>
+                          ))
+                        ) : (
+                          <div className="bg-white/5 border border-white/10 border-dashed rounded-2xl p-6 text-center text-gray-500 font-bold text-[10px]">
+                            No subscription plans added yet.
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1703,92 +2155,187 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #D1D5DB; }
       `}} />
-      {/* === 分類管理彈窗 (Add/Edit Category Modal) === */}
-      {(isAddingCategory || editingCategory) && (
+      {/* === 分類/組合預覽彈窗 (Group Preview Modal) === */}
+      {previewingGroup && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm transition-all duration-300">
-          <div className="bg-white w-full max-w-[450px] rounded-[2.5rem] shadow-2xl p-10 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-black text-gray-900">{isAddingCategory ? 'New Group' : 'Edit Group'}</h2>
+          <div className="bg-white w-full max-w-[600px] rounded-[2.5rem] shadow-2xl p-10 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start justify-between mb-8">
+              <div className="flex items-center gap-6">
+                <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center shadow-sm">
+                  <previewingGroup.icon className="w-10 h-10 text-indigo-600 stroke-[1.5]" />
+                </div>
+                <div>
+                  <h2 className="text-3xl font-black text-gray-900 mb-1">{previewingGroup.name}</h2>
+                  <p className="text-sm text-gray-400 font-bold uppercase tracking-widest">
+                    {activeTab === 'collections' ? 'Collection' : 'Category'} • {activeTab === 'collections' ? (groupCounts[`col_${previewingGroup.name}`] || 0) : (groupCounts[previewingGroup.name] || 0)} Apps
+                  </p>
+                </div>
+              </div>
               <button 
-                onClick={() => {
-                  setIsAddingCategory(false);
-                  setEditingCategory(null);
-                  setCategoryAppSearchQuery('');
-                }} 
-                className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors"
+                onClick={() => setPreviewingGroup(null)}
+                className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="space-y-6">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase ml-4">Group Name</label>
-                <input 
-                  type="text" 
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder="Enter name" 
-                  className="w-full bg-gray-50 rounded-2xl px-5 py-3.5 outline-none border border-transparent focus:border-indigo-100 transition-all" 
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase ml-4">Select Icon</label>
-                <div className="grid grid-cols-5 gap-3 bg-gray-50 p-4 rounded-2xl">
-                  {[LayoutGrid, Music, Coffee, Plane, Film, Briefcase, HeartPulse, Book, Wrench, Building2, Users, Gamepad2, ShoppingBag, Shirt, Globe].map((Icon, idx) => (
+            <div className="bg-gray-50 rounded-[2rem] p-6 mb-8 max-h-[400px] overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-1 gap-3">
+                {apps.filter(a => (activeTab === 'collections' ? a.collection : a.category) === previewingGroup.name).map(app => (
+                  <div key={app.id} className="bg-white p-4 rounded-2xl flex items-center gap-4 shadow-sm border border-gray-100/50">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white ${app.bg}`}>
+                      <app.icon className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-black text-gray-900">{app.name}</h4>
+                      <p className="text-xs text-gray-400 font-medium line-clamp-1">{app.description}</p>
+                    </div>
                     <button 
-                      key={idx}
-                      onClick={() => setNewCategoryIcon(Icon)}
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${newCategoryIcon === Icon ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-gray-400 hover:bg-gray-100'}`}
+                      onClick={() => {
+                        setSelectedApp(app);
+                        setPreviewingGroup(null);
+                      }}
+                      className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
                     >
-                      <Icon className="w-5 h-5" />
+                      <ExternalLink className="w-4 h-4" />
                     </button>
-                  ))}
-                </div>
+                  </div>
+                ))}
+                {apps.filter(a => (activeTab === 'collections' ? a.collection : a.category) === previewingGroup.name).length === 0 && (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 text-gray-200">
+                      <LayoutGrid className="w-8 h-8" />
+                    </div>
+                    <p className="text-sm text-gray-400 font-bold">No apps in this group yet</p>
+                  </div>
+                )}
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase ml-4">Add Apps to Group</label>
-                <div className="relative mb-3">
-                  <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+            <div className="flex gap-4">
+              <button 
+                onClick={() => {
+                  setEditingCategory(previewingGroup);
+                  setNewCategoryName(previewingGroup.name);
+                  setNewCategoryIcon(previewingGroup.icon);
+                  setCategoryAppSearchQuery('');
+                  const field = activeTab === 'collections' ? 'collection' : 'category';
+                  const appIds = apps.filter(a => a[field] === previewingGroup.name).map(a => a.id);
+                  setSelectedAppIdsForCategory(appIds);
+                  setPreviewingGroup(null);
+                }}
+                className="flex-1 bg-gray-100 text-gray-900 py-4 rounded-2xl font-bold hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+              >
+                <Pencil className="w-4 h-4" /> Edit Group
+              </button>
+              <button 
+                onClick={() => {
+                  handleDeleteGroup(previewingGroup.name);
+                  setPreviewingGroup(null);
+                }}
+                className="flex-1 bg-red-50 text-red-600 py-4 rounded-2xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" /> Delete Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === 分類管理彈窗 (Add/Edit Category Modal) === */}
+      {(isAddingCategory || editingCategory) && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm transition-all duration-300">
+          <div className="bg-white w-full max-w-[900px] rounded-[2.5rem] shadow-2xl p-10 animate-in fade-in zoom-in-95 duration-200 flex gap-10">
+            {/* Left Side: Name and Icon */}
+            <div className="w-[350px] space-y-8">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-black text-gray-900">{isAddingCategory ? 'New ' + (activeTab === 'collections' ? 'Collection' : 'Category') : 'Edit Group'}</h2>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase ml-4">Group Name</label>
                   <input 
-                    type="text"
-                    value={categoryAppSearchQuery}
-                    onChange={(e) => setCategoryAppSearchQuery(e.target.value)}
-                    placeholder="Search apps to add..."
-                    className="w-full bg-gray-50 rounded-xl pl-11 pr-4 py-3 text-sm outline-none border border-transparent focus:border-indigo-100 transition-all"
+                    type="text" 
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="Enter name" 
+                    className="w-full bg-gray-50 rounded-2xl px-5 py-3.5 outline-none border border-transparent focus:border-indigo-100 transition-all" 
                   />
                 </div>
-                <div className="bg-gray-50 p-4 rounded-2xl max-h-[200px] overflow-y-auto custom-scrollbar space-y-2">
-                  {apps.filter(app => app.name.toLowerCase().includes(categoryAppSearchQuery.toLowerCase())).map(app => (
-                    <div 
-                      key={app.id} 
-                      onClick={() => {
-                        if (selectedAppIdsForCategory.includes(app.id)) {
-                          setSelectedAppIdsForCategory(selectedAppIdsForCategory.filter(id => id !== app.id));
-                        } else {
-                          setSelectedAppIdsForCategory([...selectedAppIdsForCategory, app.id]);
-                        }
-                      }}
-                      className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${selectedAppIdsForCategory.includes(app.id) ? 'bg-indigo-50 border border-indigo-100' : 'bg-white border border-transparent hover:bg-gray-100'}`}
-                    >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white ${app.bg}`}>
-                        <app.icon className="w-4 h-4" />
-                      </div>
-                      <span className="text-sm font-bold text-gray-700 flex-1">{app.name}</span>
-                      {selectedAppIdsForCategory.includes(app.id) && <CheckCircle2 className="w-4 h-4 text-indigo-600" />}
-                    </div>
-                  ))}
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase ml-4">Select Icon</label>
+                  <div className="grid grid-cols-5 gap-3 bg-gray-50 p-4 rounded-2xl">
+                    {[LayoutGrid, Music, Coffee, Plane, Film, Briefcase, HeartPulse, Book, Wrench, Building2, Users, Gamepad2, ShoppingBag, Shirt, Globe].map((Icon, idx) => (
+                      <button 
+                        key={idx}
+                        onClick={() => setNewCategoryIcon(Icon)}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${newCategoryIcon === Icon ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-gray-400 hover:bg-gray-100'}`}
+                      >
+                        <Icon className="w-5 h-5" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-
+              
               <button 
-                onClick={isAddingCategory ? handleAddCategory : handleUpdateCategory}
+                onClick={isAddingCategory ? handleAddGroup : handleUpdateGroup}
                 className="w-full bg-black text-white py-4 rounded-2xl font-bold hover:bg-gray-800 transition-colors mt-4 shadow-lg shadow-gray-200"
               >
                 {isAddingCategory ? 'Create Group' : 'Save Changes'}
               </button>
+            </div>
+
+            {/* Right Side: Search and App Menu */}
+            <div className="flex-1 space-y-6">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-gray-400 uppercase ml-4">Add Apps to Group</label>
+                <button 
+                  onClick={() => {
+                    setIsAddingCategory(false);
+                    setEditingCategory(null);
+                    setCategoryAppSearchQuery('');
+                  }} 
+                  className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="relative">
+                <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                <input 
+                  type="text"
+                  value={categoryAppSearchQuery}
+                  onChange={(e) => setCategoryAppSearchQuery(e.target.value)}
+                  placeholder="Search apps to add..."
+                  className="w-full bg-gray-50 rounded-xl pl-11 pr-4 py-3 text-sm outline-none border border-transparent focus:border-indigo-100 transition-all"
+                />
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-2xl max-h-[400px] overflow-y-auto custom-scrollbar space-y-2">
+                {apps.filter(app => app.name.toLowerCase().includes(categoryAppSearchQuery.toLowerCase())).map(app => (
+                  <div 
+                    key={app.id} 
+                    onClick={() => {
+                      if (selectedAppIdsForCategory.includes(app.id)) {
+                        setSelectedAppIdsForCategory(selectedAppIdsForCategory.filter(id => id !== app.id));
+                      } else {
+                        setSelectedAppIdsForCategory([...selectedAppIdsForCategory, app.id]);
+                      }
+                    }}
+                    className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${selectedAppIdsForCategory.includes(app.id) ? 'bg-indigo-50 border border-indigo-100' : 'bg-white border border-transparent hover:bg-gray-100'}`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white ${app.bg}`}>
+                      <app.icon className="w-4 h-4" />
+                    </div>
+                    <span className="text-sm font-bold text-gray-700 flex-1">{app.name}</span>
+                    {selectedAppIdsForCategory.includes(app.id) && <CheckCircle2 className="w-4 h-4 text-indigo-600" />}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -1796,131 +2343,71 @@ export default function App() {
       {/* === PRO 訂閱彈窗 (PRO Subscription Modal) === */}
       {showProModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md transition-all duration-300">
-          <div className="bg-white w-full max-w-[1000px] rounded-[2.5rem] shadow-2xl overflow-hidden flex animate-in fade-in zoom-in-95 duration-300 relative">
+          <div className="bg-white w-full max-w-[450px] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 relative">
             <button 
               onClick={() => setShowProModal(false)}
-              className="absolute top-8 right-8 w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors z-10"
+              className="absolute top-6 right-6 w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors z-10"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
 
-            {/* 左側：功能介紹 */}
-            <div className="w-[45%] p-16 bg-white flex flex-col justify-center">
-              <h2 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">
+            <div className="p-10 flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6">
+                <Sparkles className="w-8 h-8 text-indigo-600" />
+              </div>
+              <h2 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">
                 Elevate to <span className="text-indigo-600">Premium</span>
               </h2>
-              <p className="text-gray-400 text-sm font-medium mb-12 leading-relaxed">
+              <p className="text-gray-400 text-xs font-medium mb-8 leading-relaxed">
                 Unlock enterprise-grade features and accelerate your creative workflow.
               </p>
 
-              <div className="space-y-10">
-                {[
-                  { icon: LayoutGrid, title: 'Unlimited Apps', desc: 'Build and deploy without any restrictions on project count or complexity.' },
-                  { icon: Sparkles, title: 'Advanced AI Color', desc: 'Generate professional, accessible color palettes using proprietary AI algorithms.' },
-                  { icon: ArrowDownUp, title: 'Real-time Analytics', desc: 'Deep dive into user behavior with enterprise-grade tracking and reporting.' },
-                  { icon: Globe, title: 'Seamless Sync', desc: 'Experience instant cloud synchronization across all your desktop and mobile devices.' }
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-6">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                      <item.icon className="w-6 h-6 text-indigo-600" />
-                    </div>
-                    <div>
-                      <h4 className="text-base font-black text-gray-900 mb-1">{item.title}</h4>
-                      <p className="text-xs text-gray-400 leading-relaxed font-medium">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 右側：方案選擇 */}
-            <div className="flex-1 bg-gray-50/50 p-16 flex flex-col justify-center border-l border-gray-100">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-8">Select Your Plan</span>
-              
-              <div className="space-y-4 mb-10">
+              <div className="w-full space-y-3 mb-8">
                 {/* Monthly */}
                 <div 
                   onClick={() => setSelectedPlan('Monthly')}
-                  className={`bg-white border-2 p-6 rounded-3xl shadow-sm flex items-center justify-between cursor-pointer transition-all group ${selectedPlan === 'Monthly' ? 'border-indigo-600 shadow-xl shadow-indigo-100' : 'border-transparent hover:border-indigo-100'}`}
+                  className={`bg-white border-2 p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all group ${selectedPlan === 'Monthly' ? 'border-indigo-600 shadow-xl shadow-indigo-100' : 'border-transparent hover:border-indigo-100'}`}
                 >
-                  <div className="flex flex-col">
-                    <span className="text-lg font-black text-gray-900">Monthly</span>
-                  </div>
-                  <div className="text-2xl font-black text-gray-900">$12</div>
+                  <span className="text-sm font-black text-gray-900">Monthly</span>
+                  <span className="text-lg font-black text-gray-900">$12</span>
                 </div>
 
                 {/* 1 Year */}
                 <div 
                   onClick={() => setSelectedPlan('1 Year')}
-                  className={`bg-white border-2 p-6 rounded-3xl shadow-sm flex items-center justify-between cursor-pointer transition-all group ${selectedPlan === '1 Year' ? 'border-indigo-600 shadow-xl shadow-indigo-100' : 'border-transparent hover:border-indigo-100'}`}
+                  className={`bg-white border-2 p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all group ${selectedPlan === '1 Year' ? 'border-indigo-600 shadow-xl shadow-indigo-100' : 'border-transparent hover:border-indigo-100'}`}
                 >
-                  <div className="flex flex-col">
-                    <span className="text-lg font-black text-gray-900">1 Year</span>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase">Regularly $144</span>
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-black text-gray-900">1 Year</span>
+                    <span className="text-[8px] text-gray-400 font-bold uppercase">Save 30%</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-black text-gray-900">$99</div>
-                    <div className="text-[10px] text-indigo-600 font-black uppercase">$8.25/mo</div>
+                    <div className="text-lg font-black text-gray-900">$99</div>
                   </div>
                 </div>
 
-                {/* 3 Years - Popular */}
+                {/* 3 Years */}
                 <div 
                   onClick={() => setSelectedPlan('3 Years')}
-                  className={`bg-white border-2 p-6 rounded-3xl flex items-center justify-between cursor-pointer transition-all relative ${selectedPlan === '3 Years' ? 'border-indigo-600 shadow-xl shadow-indigo-100' : 'border-transparent hover:border-indigo-100 shadow-sm'}`}
+                  className={`bg-white border-2 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all relative ${selectedPlan === '3 Years' ? 'border-indigo-600 shadow-xl shadow-indigo-100' : 'border-transparent hover:border-indigo-100 shadow-sm'}`}
                 >
-                  <div className="absolute -top-3 left-6 bg-red-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-red-200">Save $233</div>
-                  <div className="flex flex-col">
-                    <span className="text-lg font-black text-gray-900">3 Years</span>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase">Regularly $432</span>
+                  <div className="absolute -top-2.5 left-4 bg-red-500 text-white text-[7px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg shadow-red-200">Best Value</div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-black text-gray-900">3 Years</span>
+                    <span className="text-[8px] text-gray-400 font-bold uppercase">Save 50%</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-black text-gray-900">$199</div>
-                    <div className="text-[10px] text-indigo-600 font-black uppercase">$5.52/mo</div>
+                    <div className="text-lg font-black text-gray-900">$199</div>
                   </div>
                 </div>
-              </div>
-
-              {/* Payment Method */}
-              <div className="flex flex-wrap gap-6 mb-10 ml-2">
-                {[
-                  { id: 'WeChat Pay', label: 'WeChat Pay' },
-                  { id: 'Alipay', label: 'Alipay' },
-                  { id: 'Credit Card', label: 'Credit Card' }
-                ].map((method) => (
-                  <label 
-                    key={method.id}
-                    onClick={() => setSelectedPaymentMethod(method.id)}
-                    className="flex items-center gap-3 cursor-pointer group"
-                  >
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedPaymentMethod === method.id ? 'border-indigo-600' : 'border-gray-200 group-hover:border-indigo-300'}`}>
-                      {selectedPaymentMethod === method.id && <div className="w-2.5 h-2.5 rounded-full bg-indigo-600"></div>}
-                    </div>
-                    <span className={`text-sm font-bold transition-colors ${selectedPaymentMethod === method.id ? 'text-gray-900' : 'text-gray-400 group-hover:text-gray-600'}`}>
-                      {method.label}
-                    </span>
-                  </label>
-                ))}
               </div>
 
               <button 
-                onClick={() => {
-                  alert(`Successfully subscribed to ${selectedPlan} using ${selectedPaymentMethod}!`);
-                  setShowProModal(false);
-                }}
-                className="w-full bg-indigo-600 text-white py-5 rounded-3xl font-black text-lg shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-[0.98] mb-6"
+                onClick={() => setShowProModal(false)}
+                className="w-full bg-black text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-800 transition-all active:scale-95 shadow-xl shadow-black/10"
               >
-                Subscribe Now | 立即開通
+                Upgrade Now
               </button>
-
-              <div className="text-center space-y-4">
-                <p className="text-[9px] text-gray-400 font-medium leading-relaxed px-10">
-                  By subscribing, you agree to our <a href="#" className="text-gray-600 underline">Terms of Service</a> & <a href="#" className="text-gray-600 underline">Auto-Renewal Agreement</a>. Securely processed and encrypted.
-                </p>
-                <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-600 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> 30-Day Money-Back Guarantee
-                </div>
-              </div>
             </div>
           </div>
         </div>
