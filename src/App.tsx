@@ -326,6 +326,14 @@ export default function App() {
   const [editingApp, setEditingApp] = useState<any>(null); // 正在編輯的 App
   const [appToDelete, setAppToDelete] = useState<any>(null); // 準備刪除的 App
 
+  // Chatbot 狀態
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'bot', content: string, apps?: any[] }[]>([
+    { role: 'bot', content: 'Hello! I am your App Discovery assistant. What kind of app are you looking for today?' }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [isBotTyping, setIsBotTyping] = useState(false);
+
   // 計算每個分類/組合下的應用數量
   const groupCounts = useMemo(() => {
     const counts: Record<string, number> = { All: apps.length };
@@ -339,6 +347,46 @@ export default function App() {
     });
     return counts;
   }, [apps]);
+
+  // Chatbot 搜尋邏輯
+  const handleChatSubmit = async () => {
+    if (!chatInput.trim()) return;
+
+    const userMsg = chatInput;
+    setChatMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setChatInput('');
+    setIsBotTyping(true);
+
+    // 模擬搜尋邏輯
+    setTimeout(() => {
+      const query = userMsg.toLowerCase();
+      const matchedApps = apps.filter(app => {
+        const nameMatch = app.name.toLowerCase().includes(query);
+        const sloganMatch = app.description.toLowerCase().includes(query);
+        const featuresMatch = (app.features || []).some((f: any) => 
+          f.title.toLowerCase().includes(query) || f.description.toLowerCase().includes(query)
+        );
+        const businessMatch = app.businessModel?.description?.toLowerCase().includes(query) || 
+          (app.businessModel?.tiers || []).some((t: any) => t.benefits.toLowerCase().includes(query));
+        
+        return nameMatch || sloganMatch || featuresMatch || businessMatch;
+      });
+
+      if (matchedApps.length > 0) {
+        setChatMessages(prev => [...prev, { 
+          role: 'bot', 
+          content: `I found ${matchedApps.length} apps that might match your needs:`,
+          apps: matchedApps 
+        }]);
+      } else {
+        setChatMessages(prev => [...prev, { 
+          role: 'bot', 
+          content: "I'm sorry, I couldn't find any apps with those specific features in our current collection." 
+        }]);
+      }
+      setIsBotTyping(false);
+    }, 1000);
+  };
 
   // 處理分類/組合 CRUD
   const handleAddGroup = () => {
@@ -786,10 +834,24 @@ export default function App() {
             {/* Brand Palette */}
             <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100/50">
               <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-6">Extracted Brand Palette</p>
-              <div className="flex gap-3">
-                {['bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-rose-500', 'bg-orange-500', 'bg-yellow-400'].map((c, i) => (
-                  <div key={i} className={`w-10 h-10 rounded-xl ${c} shadow-sm cursor-pointer hover:scale-110 transition-transform`}></div>
-                ))}
+              <div className="flex flex-wrap gap-3">
+                {app.hexColors && app.hexColors.length > 0 ? (
+                  app.hexColors.map((hex: string, i: number) => (
+                    <div key={i} className="group relative">
+                      <div 
+                        className="w-10 h-10 rounded-xl shadow-sm cursor-pointer hover:scale-110 transition-transform" 
+                        style={{ backgroundColor: hex }}
+                      ></div>
+                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-[8px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                        {hex}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  ['bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-rose-500', 'bg-orange-500', 'bg-yellow-400'].map((c, i) => (
+                    <div key={i} className={`w-10 h-10 rounded-xl ${c} shadow-sm cursor-pointer hover:scale-110 transition-transform`}></div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -800,14 +862,20 @@ export default function App() {
                 <div className="space-y-6">
                   <div>
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3">Category</p>
-                    <span className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-[11px] font-bold">Creative Suites</span>
+                    <span className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-[11px] font-bold">{app.category}</span>
                   </div>
                   <div>
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3">Tags</p>
                     <div className="flex flex-wrap gap-2">
-                      {['Illustration', 'SVG Editor', 'Vector Art', 'Graphic Design', '+4 more'].map(tag => (
-                        <span key={tag} className="bg-white border border-gray-100 text-gray-400 px-3 py-1.5 rounded-lg text-[10px] font-bold">{tag}</span>
-                      ))}
+                      {app.tags && app.tags.length > 0 ? (
+                        app.tags.map((tag: string) => (
+                          <span key={tag} className="bg-white border border-gray-100 text-gray-400 px-3 py-1.5 rounded-lg text-[10px] font-bold">{tag}</span>
+                        ))
+                      ) : (
+                        ['Illustration', 'SVG Editor', 'Vector Art', 'Graphic Design'].map(tag => (
+                          <span key={tag} className="bg-white border border-gray-100 text-gray-400 px-3 py-1.5 rounded-lg text-[10px] font-bold">{tag}</span>
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
@@ -979,9 +1047,9 @@ export default function App() {
               </div>
             </div>
 
-            {/* 顏色過濾器 */}
-            <div className="flex items-center gap-4 mb-10">
-              <div className="bg-white rounded-[2rem] px-6 py-4 shadow-sm flex flex-col gap-4 border border-gray-100/50 flex-1 transition-all duration-300">
+            {/* 顏色過濾器與年份篩選對齊 */}
+            <div className="flex items-start gap-4 mb-10">
+              <div className="bg-white rounded-[2rem] px-6 py-4 shadow-sm flex flex-col gap-4 border border-gray-100/50 flex-1 transition-all duration-300 min-h-[64px]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">Color</span>
@@ -996,6 +1064,7 @@ export default function App() {
                         const groupOrder = Object.keys(groupToHex);
                         const sortedGroups = usedGroups.sort((a, b) => groupOrder.indexOf(a as string) - groupOrder.indexOf(b as string));
                         
+                        // 默認只顯示一行 (約 12 個)
                         const visibleGroups = isColorExpanded ? sortedGroups : sortedGroups.slice(0, 12);
                         
                         return (
@@ -1033,7 +1102,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-full px-6 py-4 shadow-sm flex items-center gap-4 border border-gray-100/50">
+              <div className="bg-white rounded-[2rem] px-6 py-4 shadow-sm flex items-center gap-4 border border-gray-100/50 h-[64px]">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">Year</span>
                   <select 
@@ -1074,14 +1143,14 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-8">
               {filteredAndSortedApps.map((app) => (
                 <div key={app.id} onClick={() => setSelectedApp(app)} className="flex flex-col group cursor-pointer relative">
-                  <div className="bg-white rounded-[2.5rem] p-7 aspect-square shadow-sm mb-4 relative transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-2">
+                  <div className={`bg-white rounded-[2.5rem] ${app.logo ? 'aspect-[4/3] p-0' : 'aspect-square p-7'} shadow-sm mb-4 relative transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-2 overflow-hidden`}>
                     <button 
                       onClick={(e) => toggleFavorite(e, app.id)}
                       className="absolute top-5 right-5 z-20 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
                     >
                       <Star className={`w-4 h-4 ${app.starred ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
                     </button>
-                    <div className={`w-full h-full rounded-[2rem] flex items-center justify-center text-white ${app.bg} overflow-hidden`}>
+                    <div className={`w-full h-full flex items-center justify-center text-white ${app.bg} overflow-hidden`}>
                       {app.logo ? (
                         <img src={app.logo} className="w-full h-full object-cover" alt={app.name} />
                       ) : (
