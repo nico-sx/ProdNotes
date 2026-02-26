@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, Reorder } from 'motion/react';
 import {
   Search, Zap, Layers, LayoutGrid, CalendarDays, ArrowDownUp, Star, StarHalf, Plus,
@@ -237,6 +237,79 @@ const initialApps = [
   }
 ];
 
+// === 自定義下拉菜單組件 ===
+const CustomSelect = ({ 
+  label, 
+  value, 
+  options, 
+  onChange, 
+  icon: Icon,
+  className = "" 
+}: { 
+  label?: string, 
+  value: any, 
+  options: { label: string, value: any }[], 
+  onChange: (val: any) => void,
+  icon?: any,
+  className?: string
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value);
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      <div className="flex flex-col gap-1.5">
+        {label && <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest ml-1">{label}</span>}
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center justify-between w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-white hover:border-indigo-100 transition-all shadow-sm"
+        >
+          <div className="flex items-center gap-2.5 truncate">
+            {Icon && <Icon className="w-4 h-4 text-gray-400" />}
+            <span className="truncate">{selectedOption?.label || 'Select...'}</span>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl py-2 animate-in fade-in zoom-in-95 duration-200 max-h-[240px] overflow-y-auto custom-scrollbar">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full flex items-center px-4 py-2.5 text-sm font-medium transition-colors ${
+                value === opt.value 
+                  ? 'bg-indigo-50 text-indigo-600 font-bold' 
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function App() {
   // === 狀態管理 ===
   const [apps, setApps] = useState(initialApps);
@@ -257,6 +330,7 @@ export default function App() {
   // 彈窗狀態
   const [selectedApp, setSelectedApp] = useState<any>(null); // 詳情彈窗
   const [isAddingNew, setIsAddingNew] = useState(false); // 新增彈窗
+  const [isPro, setIsPro] = useState(false); // 是否為 PRO 用戶
   const [newAppColors, setNewAppColors] = useState<number[]>([]); // 新增 App 時選中的顏色 (Legacy)
   const [newAppHexColors, setNewAppHexColors] = useState<string[]>([]); // 新增 App 時提取的顏色
   const [extractedColors, setExtractedColors] = useState<string[]>([]); // 從圖片提取的所有顏色
@@ -334,6 +408,14 @@ export default function App() {
   ]);
   const [chatInput, setChatInput] = useState('');
   const [isBotTyping, setIsBotTyping] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // 自動滾動聊天到底部
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, isBotTyping]);
 
   // 計算當前所有 App 使用到的顏色分組
   const usedColorGroups = useMemo(() => {
@@ -374,6 +456,18 @@ export default function App() {
     // 模擬搜尋邏輯
     setTimeout(() => {
       const query = userMsg.toLowerCase();
+      
+      // 自然語言溝通處理
+      const helpKeywords = ['what can you do', 'help', '功能', '你能做什麼', '可以幫什麼', 'how to use'];
+      if (helpKeywords.some(k => query.includes(k))) {
+        setChatMessages(prev => [...prev, { 
+          role: 'bot', 
+          content: "I am your App Discovery assistant! I can help you find the perfect apps based on your needs. Just describe what you're looking for (e.g., 'a black productivity tool' or 'apps with subscription models'), and I'll search through our collection using fuzzy matching to find the best matches for you." 
+        }]);
+        setIsBotTyping(false);
+        return;
+      }
+
       const matchedApps = apps.filter(app => {
         const nameMatch = app.name.toLowerCase().includes(query);
         const sloganMatch = app.description.toLowerCase().includes(query);
@@ -545,9 +639,17 @@ export default function App() {
     let result = [...apps];
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(app =>
-        app.name.toLowerCase().includes(q) || app.description.toLowerCase().includes(q)
-      );
+      result = result.filter(app => {
+        const nameMatch = app.name.toLowerCase().includes(q);
+        const sloganMatch = app.description.toLowerCase().includes(q);
+        const featuresMatch = (app.features || []).some((f: any) => 
+          f.title.toLowerCase().includes(q) || f.description.toLowerCase().includes(q)
+        );
+        const businessMatch = app.businessModel?.description?.toLowerCase().includes(q) || 
+          (app.businessModel?.tiers || []).some((t: any) => t.benefits.toLowerCase().includes(q));
+        
+        return nameMatch || sloganMatch || featuresMatch || businessMatch;
+      });
     }
     if (activeCategory !== 'All') {
       result = result.filter(app => app.category === activeCategory || app.collection === activeCategory);
@@ -1009,12 +1111,19 @@ export default function App() {
               style={{ width: `${(apps.length / maxApps) * 100}%` }}
             ></div>
           </div>
-          <button 
-            onClick={() => setShowProModal(true)}
-            className="w-full bg-[#0B1021] text-white py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:bg-gray-900 transition-colors"
-          >
-            <Zap className="w-4 h-4 fill-current text-yellow-400" /> PRO
-          </button>
+          {isPro ? (
+            <div className="w-full bg-emerald-50 text-emerald-600 py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm font-black border border-emerald-100">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              PRO STATUS ACTIVE
+            </div>
+          ) : (
+            <button 
+              onClick={() => setShowProModal(true)}
+              className="w-full bg-[#0B1021] text-white py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:bg-gray-900 transition-colors"
+            >
+              <Zap className="w-4 h-4 fill-current text-yellow-400" /> PRO
+            </button>
+          )}
         </div>
       </aside>
 
@@ -1106,40 +1215,36 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-[2rem] px-6 py-4 shadow-sm flex items-center gap-4 border border-gray-100/50 h-[64px]">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">Year</span>
-                  <select 
-                    value={activeYear || ''} 
-                    onChange={(e) => {
-                      setActiveYear(e.target.value ? parseInt(e.target.value) : null);
-                      if (e.target.value) setActiveMonth(null);
-                    }}
-                    className="bg-transparent text-sm font-bold text-gray-500 outline-none cursor-pointer"
-                  >
-                    <option value="">All</option>
-                    {Array.from(new Set(apps.map(app => new Date(app.releaseDate).getFullYear()))).sort((a, b) => (b as number) - (a as number)).map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="w-px h-4 bg-gray-100" />
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">Month</span>
-                  <select 
-                    value={activeMonth || ''} 
-                    onChange={(e) => {
-                      setActiveMonth(e.target.value ? parseInt(e.target.value) : null);
-                      if (e.target.value) setActiveYear(null);
-                    }}
-                    className="bg-transparent text-sm font-bold text-gray-500 outline-none cursor-pointer"
-                  >
-                    <option value="">All</option>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                      <option key={m} value={m}>{new Date(2000, m - 1).toLocaleString('default', { month: 'short' })}</option>
-                    ))}
-                  </select>
-                </div>
+              <div className="flex items-center gap-3">
+                <CustomSelect 
+                  label="Year"
+                  value={activeYear}
+                  options={[
+                    { label: 'All', value: null },
+                    ...Array.from(new Set(apps.map(app => new Date(app.releaseDate).getFullYear()))).sort((a, b) => (b as number) - (a as number)).map(year => ({ label: year.toString(), value: year }))
+                  ]}
+                  onChange={(val) => {
+                    setActiveYear(val);
+                    if (val) setActiveMonth(null);
+                  }}
+                  className="w-32"
+                />
+                <CustomSelect 
+                  label="Month"
+                  value={activeMonth}
+                  options={[
+                    { label: 'All', value: null },
+                    ...Array.from({ length: 12 }, (_, i) => ({ 
+                      label: new Date(2000, i).toLocaleString('default', { month: 'short' }), 
+                      value: i + 1 
+                    }))
+                  ]}
+                  onChange={(val) => {
+                    setActiveMonth(val);
+                    if (val) setActiveYear(null);
+                  }}
+                  className="w-32"
+                />
               </div>
             </div>
 
@@ -1468,16 +1573,11 @@ export default function App() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase ml-4">Category</label>
-                    <div className="relative">
-                      <select 
-                        value={newAppCategory}
-                        onChange={(e) => setNewAppCategory(e.target.value)}
-                        className="w-full bg-gray-50 rounded-2xl px-5 py-3.5 outline-none appearance-none text-sm font-medium"
-                      >
-                        {categoriesList.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                      </select>
-                      <ChevronDown className="w-5 h-5 text-gray-300 absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
+                    <CustomSelect 
+                      value={newAppCategory}
+                      options={categoriesList.map(c => ({ label: c.name, value: c.name }))}
+                      onChange={(val) => setNewAppCategory(val)}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase ml-4">Company Name</label>
@@ -1491,18 +1591,15 @@ export default function App() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase ml-4">Team Type</label>
-                    <div className="relative">
-                      <select 
-                        value={newAppTeamType}
-                        onChange={(e) => setNewAppTeamType(e.target.value)}
-                        className="w-full bg-gray-50 rounded-2xl px-5 py-3.5 outline-none appearance-none text-sm font-medium"
-                      >
-                        <option value="Individual">Individual</option>
-                        <option value="Studio">Studio</option>
-                        <option value="Company">Company</option>
-                      </select>
-                      <ChevronDown className="w-5 h-5 text-gray-300 absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
+                    <CustomSelect 
+                      value={newAppTeamType}
+                      options={[
+                        { label: 'Individual', value: 'Individual' },
+                        { label: 'Studio', value: 'Studio' },
+                        { label: 'Company', value: 'Company' }
+                      ]}
+                      onChange={(val) => setNewAppTeamType(val)}
+                    />
                   </div>
                 </div>
 
@@ -2444,86 +2541,6 @@ export default function App() {
           {/* Cute IP Avatar Indicator */}
           <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 border-2 border-white rounded-full"></div>
         </button>
-
-        {isChatOpen && (
-          <div className="absolute bottom-20 right-0 w-[400px] bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300">
-            <div className="bg-indigo-600 p-6 text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm">App Discovery Bot</h3>
-                  <p className="text-[10px] text-indigo-200">Online • AI Assistant</p>
-                </div>
-              </div>
-              <button onClick={() => setIsChatOpen(false)} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex-1 h-[400px] overflow-y-auto p-6 space-y-6 custom-scrollbar bg-gray-50/50">
-              {chatMessages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-2xl p-4 text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-gray-700 shadow-sm border border-gray-100 rounded-tl-none'}`}>
-                    {msg.content}
-                    {msg.apps && (
-                      <div className="mt-4 space-y-3">
-                        {msg.apps.map(app => (
-                          <div 
-                            key={app.id} 
-                            onClick={() => {
-                              setSelectedApp(app);
-                              setIsChatOpen(false);
-                            }}
-                            className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex items-center gap-3 cursor-pointer hover:bg-indigo-50 hover:border-indigo-100 transition-all"
-                          >
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${app.bg} overflow-hidden`}>
-                              {app.logo ? <img src={app.logo} className="w-full h-full object-cover" /> : <app.icon className="w-5 h-5" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-bold text-xs text-gray-900 truncate">{app.name}</p>
-                              <p className="text-[10px] text-gray-400 truncate">{app.description}</p>
-                            </div>
-                            <ExternalLink className="w-3 h-3 text-gray-300" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {isBotTyping && (
-                <div className="flex justify-start">
-                  <div className="bg-white text-gray-400 shadow-sm border border-gray-100 rounded-2xl rounded-tl-none p-4 flex gap-1">
-                    <span className="w-1.5 h-1.5 bg-gray-200 rounded-full animate-bounce"></span>
-                    <span className="w-1.5 h-1.5 bg-gray-200 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                    <span className="w-1.5 h-1.5 bg-gray-200 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 bg-white border-t border-gray-100">
-              <div className="relative">
-                <input 
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
-                  placeholder="Tell me what app you need..."
-                  className="w-full bg-gray-50 rounded-2xl pl-4 pr-12 py-3 text-sm outline-none border border-transparent focus:border-indigo-100 transition-all"
-                />
-                <button 
-                  onClick={handleChatSubmit}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-colors"
-                >
-                  <ArrowDownUp className="w-4 h-4 rotate-90" />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* === Chatbot UI === */}
@@ -2539,8 +2556,8 @@ export default function App() {
         </button>
 
         {isChatOpen && (
-          <div className="absolute bottom-20 right-0 w-[400px] bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300">
-            <div className="bg-indigo-600 p-6 text-white flex items-center justify-between">
+          <div className="absolute bottom-20 right-0 w-[400px] max-h-[calc(100vh-160px)] bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300">
+            <div className="bg-indigo-600 p-6 text-white flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-white" />
@@ -2555,7 +2572,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="flex-1 h-[400px] overflow-y-auto p-6 space-y-6 custom-scrollbar bg-gray-50/50">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-gray-50/50">
               {chatMessages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] rounded-2xl p-4 text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-gray-700 shadow-sm border border-gray-100 rounded-tl-none'}`}>
@@ -2595,6 +2612,7 @@ export default function App() {
                   </div>
                 </div>
               )}
+              <div ref={chatEndRef} />
             </div>
 
             <div className="p-4 bg-white border-t border-gray-100">
@@ -2696,7 +2714,10 @@ export default function App() {
               </div>
 
               <button 
-                onClick={() => setShowProModal(false)}
+                onClick={() => {
+                  setIsPro(true);
+                  setShowProModal(false);
+                }}
                 className="w-full bg-black text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-800 transition-all active:scale-95 shadow-xl shadow-black/10"
               >
                 Upgrade Now
