@@ -259,6 +259,7 @@ export default function App() {
   const [isAddingNew, setIsAddingNew] = useState(false); // 新增彈窗
   const [newAppColors, setNewAppColors] = useState<number[]>([]); // 新增 App 時選中的顏色 (Legacy)
   const [newAppHexColors, setNewAppHexColors] = useState<string[]>([]); // 新增 App 時提取的顏色
+  const [extractedColors, setExtractedColors] = useState<string[]>([]); // 從圖片提取的所有顏色
   const [isExtractingColors, setIsExtractingColors] = useState(false); // 是否正在模擬提取顏色
 
   // 新增 App 表單狀態
@@ -333,6 +334,19 @@ export default function App() {
   ]);
   const [chatInput, setChatInput] = useState('');
   const [isBotTyping, setIsBotTyping] = useState(false);
+
+  // 計算當前所有 App 使用到的顏色分組
+  const usedColorGroups = useMemo(() => {
+    const groups = new Set<string>();
+    apps.forEach(app => {
+      (app.hexColors || []).forEach(hex => {
+        groups.add(getColorGroup(hex));
+      });
+    });
+    
+    const groupOrder = Object.keys(groupToHex);
+    return Array.from(groups).sort((a, b) => groupOrder.indexOf(a) - groupOrder.indexOf(b));
+  }, [apps]);
 
   // 計算每個分類/組合下的應用數量
   const groupCounts = useMemo(() => {
@@ -478,6 +492,8 @@ export default function App() {
     setNewAppPlatforms(app.platforms || []);
     setNewAppCategory(app.category);
     setNewAppColors(app.colorIds || []);
+    setNewAppHexColors(app.hexColors || []);
+    setExtractedColors(app.hexColors || []);
     setNewAppLogo(app.logo || null);
     setNewAppScreenshots(app.screenshots || []);
     setNewAppRating(app.rating || '4.5');
@@ -586,6 +602,9 @@ export default function App() {
     setApps(apps.map(app => app.id === appId ? { ...app, starred: !app.starred } : app));
     if (selectedApp && selectedApp.id === appId) {
       setSelectedApp({ ...selectedApp, starred: !selectedApp.starred });
+    }
+    if (viewingFullPageApp && viewingFullPageApp.id === appId) {
+      setViewingFullPageApp({ ...viewingFullPageApp, starred: !viewingFullPageApp.starred });
     }
   };
 
@@ -1034,10 +1053,13 @@ export default function App() {
                     setNewAppSlogan('');
                     setNewAppTags([]);
                     setNewAppColors([]);
+                    setNewAppHexColors([]);
+                    setExtractedColors([]);
                     setNewAppLogo(null);
                     setNewAppScreenshots([]);
                     setNewAppRating('4.5');
                     setNewAppFeatures([]);
+                    setNewAppBusinessModel({ description: '', tiers: [] });
                     setNewAppPlatformDownloads({});
                   }}
                   className="bg-black text-white px-6 h-11 rounded-xl shadow-sm flex items-center gap-2 text-sm font-bold hover:bg-gray-800 transition-all active:scale-95 ml-2"
@@ -1049,52 +1071,34 @@ export default function App() {
 
             {/* 顏色過濾器與年份篩選對齊 */}
             <div className="flex items-start gap-4 mb-10">
-              <div className="bg-white rounded-[2rem] px-6 py-4 shadow-sm flex flex-col gap-4 border border-gray-100/50 flex-1 transition-all duration-300 min-h-[64px]">
+              <div className="bg-white rounded-[2rem] px-6 py-4 shadow-sm flex flex-col gap-4 border border-gray-100/50 flex-1 transition-all duration-300">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-6">
                     <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">Color</span>
-                    <div className="flex items-center gap-3">
-                      {/* 動態計算所有 App 使用到的顏色組 */}
-                      {(() => {
-                        const usedGroups = Array.from(new Set(apps.flatMap(app => 
-                          (app.hexColors || []).map(hex => getColorGroup(hex as string))
-                        ))) as string[];
-                        
-                        // 排序：按照 groupToHex 的順序
-                        const groupOrder = Object.keys(groupToHex);
-                        const sortedGroups = usedGroups.sort((a, b) => groupOrder.indexOf(a as string) - groupOrder.indexOf(b as string));
-                        
-                        // 默認只顯示一行 (約 12 個)
-                        const visibleGroups = isColorExpanded ? sortedGroups : sortedGroups.slice(0, 12);
-                        
-                        return (
-                          <div className="flex flex-wrap items-center gap-3">
-                            {visibleGroups.map((groupName) => (
-                              <button
-                                key={groupName}
-                                onClick={() => {
-                                  if (activeColorGroups.includes(groupName)) {
-                                    setActiveColorGroups(activeColorGroups.filter(g => g !== groupName));
-                                  } else {
-                                    setActiveColorGroups([...activeColorGroups, groupName]);
-                                  }
-                                }}
-                                title={groupName}
-                                className={`w-4 h-4 rounded-full transition-all flex-shrink-0 ${activeColorGroups.includes(groupName) ? 'ring-2 ring-offset-2 ring-gray-300 scale-110' : 'hover:scale-125'}`}
-                                style={{ backgroundColor: groupToHex[groupName as string] }}
-                              />
-                            ))}
-                          </div>
-                        );
-                      })()}
+                    <div className="flex flex-wrap items-center gap-3">
+                      {(isColorExpanded ? usedColorGroups : usedColorGroups.slice(0, 12)).map((groupName) => (
+                        <button
+                          key={groupName}
+                          onClick={() => {
+                            if (activeColorGroups.includes(groupName)) {
+                              setActiveColorGroups(activeColorGroups.filter(g => g !== groupName));
+                            } else {
+                              setActiveColorGroups([...activeColorGroups, groupName]);
+                            }
+                          }}
+                          title={groupName}
+                          className={`w-5 h-5 rounded-full transition-all flex-shrink-0 border-2 ${activeColorGroups.includes(groupName) ? 'border-gray-900 scale-110 shadow-md' : 'border-transparent hover:scale-125'}`}
+                          style={{ backgroundColor: groupToHex[groupName] }}
+                        />
+                      ))}
                     </div>
                   </div>
                   
                   {/* 展開按鈕 */}
-                  {Array.from(new Set(apps.flatMap(app => (app.hexColors || []).map(hex => getColorGroup(hex))))).length > 12 && (
+                  {usedColorGroups.length > 12 && (
                     <button 
                       onClick={() => setIsColorExpanded(!isColorExpanded)}
-                      className="text-gray-400 hover:text-indigo-600 transition-colors"
+                      className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-indigo-600 transition-all"
                     >
                       <ChevronDown className={`w-4 h-4 transition-transform ${isColorExpanded ? 'rotate-180' : ''}`} />
                     </button>
@@ -1143,14 +1147,14 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-8">
               {filteredAndSortedApps.map((app) => (
                 <div key={app.id} onClick={() => setSelectedApp(app)} className="flex flex-col group cursor-pointer relative">
-                  <div className={`bg-white rounded-[2.5rem] ${app.logo ? 'aspect-[4/3] p-0' : 'aspect-square p-7'} shadow-sm mb-4 relative transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-2 overflow-hidden`}>
+                  <div className="bg-white rounded-[2.5rem] aspect-square p-0 shadow-sm mb-4 relative transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-2 overflow-hidden">
                     <button 
                       onClick={(e) => toggleFavorite(e, app.id)}
                       className="absolute top-5 right-5 z-20 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
                     >
                       <Star className={`w-4 h-4 ${app.starred ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
                     </button>
-                    <div className={`w-full h-full flex items-center justify-center text-white ${app.bg} overflow-hidden`}>
+                    <div className={`w-full h-full rounded-[2rem] flex items-center justify-center text-white ${app.bg} overflow-hidden ${app.logo ? '' : 'p-7'}`}>
                       {app.logo ? (
                         <img src={app.logo} className="w-full h-full object-cover" alt={app.name} />
                       ) : (
@@ -1319,7 +1323,8 @@ export default function App() {
                             setNewAppLogo(logoUrl);
                             setIsExtractingColors(true);
                             const extracted = await extractColorsFromImage(logoUrl);
-                            setNewAppHexColors(extracted);
+                            setExtractedColors(extracted);
+                            setNewAppHexColors(extracted); // 預設選中所有提取的顏色
                             setIsExtractingColors(false);
                           };
                           reader.readAsDataURL(file);
@@ -1349,16 +1354,23 @@ export default function App() {
                   {newAppLogo && (
                     <div className="flex flex-col items-center gap-4">
                       <div className="flex flex-wrap justify-center gap-2.5 max-w-[180px]">
-                        {newAppHexColors.map((hex, idx) => (
+                        {extractedColors.map((hex, idx) => (
                           <div 
                             key={idx} 
+                            onClick={() => {
+                              if (newAppHexColors.includes(hex)) {
+                                setNewAppHexColors(newAppHexColors.filter(c => c !== hex));
+                              } else {
+                                setNewAppHexColors([...newAppHexColors, hex]);
+                              }
+                            }}
                             title={getColorGroup(hex)}
-                            className={`w-6 h-6 rounded-full border-2 border-white shadow-sm cursor-pointer transition-all hover:scale-110`} 
+                            className={`w-7 h-7 rounded-full border-2 shadow-sm cursor-pointer transition-all hover:scale-110 ${newAppHexColors.includes(hex) ? 'border-indigo-600 scale-110 ring-2 ring-indigo-100' : 'border-white opacity-40'}`} 
                             style={{ backgroundColor: hex }}
                           />
                         ))}
                       </div>
-                      <span className="text-[10px] font-bold text-gray-300 uppercase">Extracted Colors</span>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Select Brand Colors</span>
                     </div>
                   )}
                 </div>
@@ -1934,6 +1946,10 @@ export default function App() {
               </div>
               <button
                 onClick={() => {
+                  if (!newAppName.trim() || !newAppCategory) {
+                    alert('Product Name and Category are required!');
+                    return;
+                  }
                   if (editingApp) {
                     // 更新現有應用
                     const updatedApps = apps.map(app => {
@@ -2248,25 +2264,29 @@ export default function App() {
               </button>
             </div>
 
-            <div className="bg-gray-50 rounded-[2rem] p-6 mb-8 max-h-[400px] overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 gap-3">
+            <div className="bg-gray-50 rounded-[2rem] p-8 mb-8 max-h-[500px] overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-1 gap-4">
                 {apps.filter(a => (activeTab === 'collections' ? a.collection : a.category) === previewingGroup.name).map(app => (
-                  <div key={app.id} className="bg-white p-4 rounded-2xl flex items-center gap-4 shadow-sm border border-gray-100/50">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white ${app.bg}`}>
-                      <app.icon className="w-6 h-6" />
+                  <div key={app.id} className="bg-white p-6 rounded-3xl flex items-center gap-6 shadow-sm border border-gray-100/50 hover:shadow-md transition-shadow">
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white ${app.bg} overflow-hidden flex-shrink-0`}>
+                      {app.logo ? (
+                        <img src={app.logo} className="w-full h-full object-cover" alt={app.name} />
+                      ) : (
+                        <app.icon className="w-8 h-8" />
+                      )}
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-black text-gray-900">{app.name}</h4>
-                      <p className="text-xs text-gray-400 font-medium line-clamp-1">{app.description}</p>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-black text-lg text-gray-900 mb-1">{app.name}</h4>
+                      <p className="text-sm text-gray-400 font-medium line-clamp-1">{app.description}</p>
                     </div>
                     <button 
                       onClick={() => {
                         setSelectedApp(app);
                         setPreviewingGroup(null);
                       }}
-                      className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                      className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
                     >
-                      <ExternalLink className="w-4 h-4" />
+                      <ExternalLink className="w-5 h-5" />
                     </button>
                   </div>
                 ))}
@@ -2409,10 +2429,194 @@ export default function App() {
           </div>
         </div>
       )}
-      {/* === PRO 訂閱彈窗 (PRO Subscription Modal) === */}
+      {/* === Chatbot UI === */}
+      <div className="fixed bottom-8 right-8 z-[60]">
+        <button 
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className="w-16 h-16 bg-indigo-600 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <Sparkles className="w-8 h-8 text-white relative z-10" />
+          {/* Cute IP Avatar Indicator */}
+          <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 border-2 border-white rounded-full"></div>
+        </button>
+
+        {isChatOpen && (
+          <div className="absolute bottom-20 right-0 w-[400px] bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300">
+            <div className="bg-indigo-600 p-6 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">App Discovery Bot</h3>
+                  <p className="text-[10px] text-indigo-200">Online • AI Assistant</p>
+                </div>
+              </div>
+              <button onClick={() => setIsChatOpen(false)} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 h-[400px] overflow-y-auto p-6 space-y-6 custom-scrollbar bg-gray-50/50">
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] rounded-2xl p-4 text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-gray-700 shadow-sm border border-gray-100 rounded-tl-none'}`}>
+                    {msg.content}
+                    {msg.apps && (
+                      <div className="mt-4 space-y-3">
+                        {msg.apps.map(app => (
+                          <div 
+                            key={app.id} 
+                            onClick={() => {
+                              setSelectedApp(app);
+                              setIsChatOpen(false);
+                            }}
+                            className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex items-center gap-3 cursor-pointer hover:bg-indigo-50 hover:border-indigo-100 transition-all"
+                          >
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${app.bg} overflow-hidden`}>
+                              {app.logo ? <img src={app.logo} className="w-full h-full object-cover" /> : <app.icon className="w-5 h-5" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-xs text-gray-900 truncate">{app.name}</p>
+                              <p className="text-[10px] text-gray-400 truncate">{app.description}</p>
+                            </div>
+                            <ExternalLink className="w-3 h-3 text-gray-300" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {isBotTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-white text-gray-400 shadow-sm border border-gray-100 rounded-2xl rounded-tl-none p-4 flex gap-1">
+                    <span className="w-1.5 h-1.5 bg-gray-200 rounded-full animate-bounce"></span>
+                    <span className="w-1.5 h-1.5 bg-gray-200 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                    <span className="w-1.5 h-1.5 bg-gray-200 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-white border-t border-gray-100">
+              <div className="relative">
+                <input 
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
+                  placeholder="Tell me what app you need..."
+                  className="w-full bg-gray-50 rounded-2xl pl-4 pr-12 py-3 text-sm outline-none border border-transparent focus:border-indigo-100 transition-all"
+                />
+                <button 
+                  onClick={handleChatSubmit}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-colors"
+                >
+                  <ArrowDownUp className="w-4 h-4 rotate-90" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* === Chatbot UI === */}
+      <div className="fixed bottom-8 right-8 z-[60]">
+        <button 
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className="w-16 h-16 bg-indigo-600 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <Sparkles className="w-8 h-8 text-white relative z-10" />
+          {/* Cute IP Avatar Indicator */}
+          <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 border-2 border-white rounded-full"></div>
+        </button>
+
+        {isChatOpen && (
+          <div className="absolute bottom-20 right-0 w-[400px] bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300">
+            <div className="bg-indigo-600 p-6 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">App Discovery Bot</h3>
+                  <p className="text-[10px] text-indigo-200">Online • AI Assistant</p>
+                </div>
+              </div>
+              <button onClick={() => setIsChatOpen(false)} className="hover:bg-white/10 p-2 rounded-lg transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 h-[400px] overflow-y-auto p-6 space-y-6 custom-scrollbar bg-gray-50/50">
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] rounded-2xl p-4 text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-gray-700 shadow-sm border border-gray-100 rounded-tl-none'}`}>
+                    {msg.content}
+                    {msg.apps && (
+                      <div className="mt-4 space-y-3">
+                        {msg.apps.map(app => (
+                          <div 
+                            key={app.id} 
+                            onClick={() => {
+                              setSelectedApp(app);
+                              setIsChatOpen(false);
+                            }}
+                            className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex items-center gap-3 cursor-pointer hover:bg-indigo-50 hover:border-indigo-100 transition-all"
+                          >
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${app.bg} overflow-hidden`}>
+                              {app.logo ? <img src={app.logo} className="w-full h-full object-cover" /> : <app.icon className="w-5 h-5" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-xs text-gray-900 truncate">{app.name}</p>
+                              <p className="text-[10px] text-gray-400 truncate">{app.description}</p>
+                            </div>
+                            <ExternalLink className="w-3 h-3 text-gray-300" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {isBotTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-white text-gray-400 shadow-sm border border-gray-100 rounded-2xl rounded-tl-none p-4 flex gap-1">
+                    <span className="w-1.5 h-1.5 bg-gray-200 rounded-full animate-bounce"></span>
+                    <span className="w-1.5 h-1.5 bg-gray-200 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                    <span className="w-1.5 h-1.5 bg-gray-200 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-white border-t border-gray-100">
+              <div className="relative">
+                <input 
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
+                  placeholder="Tell me what app you need..."
+                  className="w-full bg-gray-50 rounded-2xl pl-4 pr-12 py-3 text-sm outline-none border border-transparent focus:border-indigo-100 transition-all"
+                />
+                <button 
+                  onClick={handleChatSubmit}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-colors"
+                >
+                  <ArrowDownUp className="w-4 h-4 rotate-90" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
       {showProModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md transition-all duration-300">
-          <div className="bg-white w-full max-w-[450px] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 relative">
+          <div className="bg-white w-full max-w-[700px] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-300 relative">
             <button 
               onClick={() => setShowProModal(false)}
               className="absolute top-6 right-6 w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors z-10"
@@ -2420,55 +2624,71 @@ export default function App() {
               <X className="w-4 h-4" />
             </button>
 
-            <div className="p-10 flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6">
-                <Sparkles className="w-8 h-8 text-indigo-600" />
+            {/* Left Side: Features */}
+            <div className="flex-1 bg-indigo-600 p-10 text-white">
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
+                <Zap className="w-6 h-6 text-white fill-current" />
               </div>
-              <h2 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">
-                Elevate to <span className="text-indigo-600">Premium</span>
-              </h2>
-              <p className="text-gray-400 text-xs font-medium mb-8 leading-relaxed">
-                Unlock enterprise-grade features and accelerate your creative workflow.
+              <h2 className="text-3xl font-black mb-4 tracking-tight">Go Pro</h2>
+              <p className="text-indigo-100 text-sm font-medium mb-10 leading-relaxed">
+                Unlock full potential with our premium features designed for power users.
               </p>
+              <div className="space-y-4">
+                {[
+                  'Unlimited App Additions',
+                  'Advanced Color Analytics',
+                  'Custom Collection Branding',
+                  'Export Data to JSON/CSV',
+                  'Priority AI Support'
+                ].map((feature, i) => (
+                  <div key={i} className="flex items-center gap-3 text-sm font-bold">
+                    <CheckCircle2 className="w-5 h-5 text-indigo-300" />
+                    {feature}
+                  </div>
+                ))}
+              </div>
+            </div>
 
-              <div className="w-full space-y-3 mb-8">
-                {/* Monthly */}
-                <div 
-                  onClick={() => setSelectedPlan('Monthly')}
-                  className={`bg-white border-2 p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all group ${selectedPlan === 'Monthly' ? 'border-indigo-600 shadow-xl shadow-indigo-100' : 'border-transparent hover:border-indigo-100'}`}
-                >
-                  <span className="text-sm font-black text-gray-900">Monthly</span>
-                  <span className="text-lg font-black text-gray-900">$12</span>
-                </div>
+            {/* Right Side: Plans & Payment */}
+            <div className="flex-1 p-10 bg-white">
+              <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest mb-6">Select a Plan</h3>
+              <div className="space-y-3 mb-8">
+                {[
+                  { id: 'Monthly', price: '$12', cycle: 'month' },
+                  { id: '1 Year', price: '$99', cycle: 'year', discount: 'Save 30%' },
+                  { id: '3 Years', price: '$199', cycle: '3 years', discount: 'Save 50%', popular: true }
+                ].map((plan) => (
+                  <div 
+                    key={plan.id}
+                    onClick={() => setSelectedPlan(plan.id)}
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all relative ${selectedPlan === plan.id ? 'border-indigo-600 bg-indigo-50/30' : 'border-gray-100 hover:border-indigo-100'}`}
+                  >
+                    {plan.popular && <div className="absolute -top-2 right-4 bg-red-500 text-white text-[7px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Best Value</div>}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-black text-gray-900">{plan.id}</p>
+                        {plan.discount && <p className="text-[9px] text-indigo-600 font-bold">{plan.discount}</p>}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-black text-gray-900">{plan.price}</p>
+                        <p className="text-[9px] text-gray-400 font-bold">/{plan.cycle}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-                {/* 1 Year */}
-                <div 
-                  onClick={() => setSelectedPlan('1 Year')}
-                  className={`bg-white border-2 p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all group ${selectedPlan === '1 Year' ? 'border-indigo-600 shadow-xl shadow-indigo-100' : 'border-transparent hover:border-indigo-100'}`}
-                >
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm font-black text-gray-900">1 Year</span>
-                    <span className="text-[8px] text-gray-400 font-bold uppercase">Save 30%</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-black text-gray-900">$99</div>
-                  </div>
-                </div>
-
-                {/* 3 Years */}
-                <div 
-                  onClick={() => setSelectedPlan('3 Years')}
-                  className={`bg-white border-2 p-4 rounded-2xl flex items-center justify-between cursor-pointer transition-all relative ${selectedPlan === '3 Years' ? 'border-indigo-600 shadow-xl shadow-indigo-100' : 'border-transparent hover:border-indigo-100 shadow-sm'}`}
-                >
-                  <div className="absolute -top-2.5 left-4 bg-red-500 text-white text-[7px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg shadow-red-200">Best Value</div>
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm font-black text-gray-900">3 Years</span>
-                    <span className="text-[8px] text-gray-400 font-bold uppercase">Save 50%</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-black text-gray-900">$199</div>
-                  </div>
-                </div>
+              <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest mb-4">Payment Method</h3>
+              <div className="grid grid-cols-2 gap-3 mb-8">
+                {['WeChat Pay', 'Alipay'].map(method => (
+                  <button 
+                    key={method}
+                    onClick={() => setSelectedPaymentMethod(method)}
+                    className={`py-3 rounded-xl border-2 text-[10px] font-black transition-all ${selectedPaymentMethod === method ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                  >
+                    {method}
+                  </button>
+                ))}
               </div>
 
               <button 
