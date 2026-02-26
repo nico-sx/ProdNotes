@@ -6,7 +6,7 @@ import {
   Clock, Image as ImageIcon, Heart, ExternalLink, Pencil, Trash2,
   X, Music, Coffee, Plane, Film, Briefcase, HeartPulse, Book, Wrench, Building2, Users, Gamepad2, ShoppingBag, Shirt,
   Globe, Smartphone, Monitor, Apple, Upload, CheckCircle2, ChevronLeft, ChevronRight, GripVertical,
-  CreditCard, Wallet, Bold, Italic, List
+  CreditCard, Wallet, Bold, Italic, List, ShieldCheck
 } from 'lucide-react';
 
 // === 顏色工具函數 ===
@@ -43,42 +43,26 @@ const getColorGroup = (hex: string) => {
   if (l > 85) return 'White';
   if (s < 15) return 'Gray';
 
-  if (h < 15) return 'Red';
-  if (h < 35) return 'Red-Orange';
-  if (h < 50) return 'Orange';
-  if (h < 65) return 'Orange-Yellow';
-  if (h < 85) return 'Yellow';
-  if (h < 110) return 'Yellow-Green';
+  if (h < 30) return 'Red';
+  if (h < 60) return 'Orange';
+  if (h < 90) return 'Yellow';
   if (h < 150) return 'Green';
-  if (h < 170) return 'Green-Cyan';
-  if (h < 195) return 'Cyan';
-  if (h < 215) return 'Cyan-Blue';
-  if (h < 245) return 'Blue';
-  if (h < 270) return 'Blue-Purple';
-  if (h < 295) return 'Purple';
-  if (h < 320) return 'Purple-Pink';
-  if (h < 340) return 'Pink';
-  if (h < 360) return 'Pink-Red';
+  if (h < 210) return 'Cyan';
+  if (h < 270) return 'Blue';
+  if (h < 300) return 'Purple';
+  if (h < 335) return 'Pink';
   return 'Red';
 };
 
 const groupToHex: Record<string, string> = {
   'Red': '#ef4444',
-  'Red-Orange': '#f97316',
-  'Orange': '#f59e0b',
-  'Orange-Yellow': '#fbbf24',
+  'Orange': '#f97316',
   'Yellow': '#eab308',
-  'Yellow-Green': '#84cc16',
   'Green': '#22c55e',
-  'Green-Cyan': '#10b981',
   'Cyan': '#06b6d4',
-  'Cyan-Blue': '#0ea5e9',
   'Blue': '#3b82f6',
-  'Blue-Purple': '#6366f1',
   'Purple': '#8b5cf6',
-  'Purple-Pink': '#a855f7',
   'Pink': '#ec4899',
-  'Pink-Red': '#f43f5e',
   'Black': '#000000',
   'Gray': '#6b7280',
   'White': '#ffffff'
@@ -139,6 +123,41 @@ const categories = [
   { name: 'Shopping', icon: ShoppingBag },
   { name: 'Lifestyle', icon: Shirt },
 ];
+
+const categoryTranslations: Record<string, Record<string, string>> = {
+  en: {
+    'All': 'All',
+    'Music': 'Music',
+    'Food & Drink': 'Food & Drink',
+    'Travel': 'Travel',
+    'Entertainment': 'Entertainment',
+    'Productivity': 'Productivity',
+    'Health & Fitness': 'Health & Fitness',
+    'Reference': 'Reference',
+    'Utilities': 'Utilities',
+    'Business': 'Business',
+    'Social Networking': 'Social Networking',
+    'Games': 'Games',
+    'Shopping': 'Shopping',
+    'Lifestyle': 'Lifestyle',
+  },
+  zh: {
+    'All': '全部',
+    'Music': '音樂',
+    'Food & Drink': '餐飲',
+    'Travel': '旅遊',
+    'Entertainment': '娛樂',
+    'Productivity': '生產力',
+    'Health & Fitness': '健康',
+    'Reference': '參考',
+    'Utilities': '工具',
+    'Business': '商務',
+    'Social Networking': '社交',
+    'Games': '遊戲',
+    'Shopping': '購物',
+    'Lifestyle': '生活',
+  }
+};
 
 const colors = [
   { id: 0, name: 'Red', class: 'bg-red-500', group: 'red' },
@@ -401,6 +420,177 @@ export default function App() {
   const [editingApp, setEditingApp] = useState<any>(null); // 正在編輯的 App
   const [appToDelete, setAppToDelete] = useState<any>(null); // 準備刪除的 App
 
+  // === Auth & Language States ===
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<{ email?: string, phone?: string } | null>(null);
+  const [language, setLanguage] = useState<'en' | 'zh'>('zh');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showUserCenter, setShowUserCenter] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
+
+  const t = useMemo(() => {
+    const translations: any = {
+      en: {
+        search: 'Search apps',
+        subscription: 'Subscription',
+        collections: 'Collections',
+        categories: 'Categories',
+        appsAdded: 'Apps Added',
+        pro: 'PRO',
+        proActive: 'PRO STATUS ACTIVE',
+        addApp: 'Add App',
+        color: 'Color',
+        year: 'Year',
+        month: 'Month',
+        results: 'results founded',
+        login: 'Login',
+        logout: 'Logout',
+        account: 'Account',
+        language: 'Language',
+        email: 'Email',
+        phone: 'Phone',
+        password: 'Password',
+        phoneNumber: 'Phone Number',
+        verificationCode: 'Verification Code',
+        sendCode: 'Send Code',
+        userCenter: 'User Center',
+        settings: 'Settings',
+        switchLang: 'Switch Language',
+        welcome: 'Welcome back',
+        noAccount: "Don't have an account?",
+        hasAccount: 'Already have an account?',
+        signup: 'Sign Up',
+        loginBtn: 'Log In',
+        all: 'All',
+        manage: 'Manage',
+        organize: 'Organize your application groups',
+        sort: 'Sort',
+        publisher: 'Publisher',
+        brandPalette: 'Extracted Brand Palette',
+        metadata: 'Metadata',
+        changesSaved: 'Changes Saved',
+        edit: 'Edit',
+        confirmChanges: 'Confirm Changes',
+        delete: 'Delete',
+        cancel: 'Cancel',
+        save: 'Save',
+        name: 'Name',
+        description: 'Description',
+        tags: 'Tags',
+        releaseDate: 'Release Date',
+        platforms: 'Platforms',
+        rating: 'Rating',
+        features: 'Key Features',
+        businessModel: 'Business Model',
+        tiers: 'Subscription Plans',
+        benefits: 'Benefits',
+        price: 'Price',
+        cycle: 'Cycle',
+        currency: 'Currency',
+        addFeature: 'Add Feature',
+        addTier: 'Add Tier',
+        uploadLogo: 'Upload Logo',
+        uploadScreenshots: 'Upload Screenshots',
+        extractColors: 'Extract Colors',
+        noImage: 'No Image',
+        bestValue: 'Best Value',
+        selectPlan: 'Select a Plan',
+        paymentMethod: 'Payment Method',
+        upgradeNow: 'Upgrade Now',
+        membership: 'Membership',
+        vip: 'VIP Member',
+        free: 'Free User',
+        limit: 'Limit',
+        unlimited: 'Unlimited',
+        unlock: 'Unlock',
+        priority: 'Priority AI Support',
+        branding: 'Custom Collection Branding',
+        analytics: 'Advanced Color Analytics',
+        export: 'Export Data to JSON/CSV',
+      },
+      zh: {
+        search: '搜索應用',
+        subscription: '訂閱方案',
+        collections: '收藏夾',
+        categories: '分類',
+        appsAdded: '已添加應用',
+        pro: '專業版',
+        proActive: '專業版已激活',
+        addApp: '添加應用',
+        color: '顏色',
+        year: '年份',
+        month: '月份',
+        results: '個結果',
+        login: '登錄',
+        logout: '登出',
+        account: '賬戶',
+        language: '語言設置',
+        email: '郵箱',
+        phone: '手機號碼',
+        password: '密碼',
+        phoneNumber: '手機號',
+        verificationCode: '驗證碼',
+        sendCode: '發送驗證碼',
+        userCenter: '用戶中心',
+        settings: '賬號設置',
+        switchLang: '切換語言',
+        welcome: '歡迎回來',
+        noAccount: '還沒有賬號？',
+        hasAccount: '已有賬號？',
+        signup: '註冊',
+        loginBtn: '登錄',
+        all: '全部',
+        manage: '管理',
+        organize: '組織您的應用分組',
+        sort: '排序',
+        publisher: '發行商',
+        brandPalette: '提取的品牌色板',
+        metadata: '元數據',
+        changesSaved: '更改已保存',
+        edit: '編輯',
+        confirmChanges: '確認更改',
+        delete: '刪除',
+        cancel: '取消',
+        save: '保存',
+        name: '名稱',
+        description: '描述',
+        tags: '標籤',
+        releaseDate: '發布日期',
+        platforms: '平台',
+        rating: '評分',
+        features: '核心功能',
+        businessModel: '商業模式',
+        tiers: '訂閱方案',
+        benefits: '權益',
+        price: '價格',
+        cycle: '週期',
+        currency: '貨幣',
+        addFeature: '添加功能',
+        addTier: '添加方案',
+        uploadLogo: '上傳圖標',
+        uploadScreenshots: '上傳截圖',
+        extractColors: '提取顏色',
+        noImage: '暫無圖片',
+        bestValue: '超值推薦',
+        selectPlan: '選擇方案',
+        paymentMethod: '支付方式',
+        upgradeNow: '立即升級',
+        membership: '會員身份',
+        vip: 'VIP 會員',
+        free: '普通用戶',
+        limit: '限制',
+        unlimited: '無限',
+        unlock: '解鎖',
+        priority: '優先 AI 支持',
+        branding: '自定義收藏夾品牌',
+        analytics: '高級顏色分析',
+        export: '導出數據為 JSON/CSV',
+      }
+    };
+    return translations[language];
+  }, [language]);
+
   // Chatbot 狀態
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'bot', content: string, apps?: any[] }[]>([
@@ -632,7 +822,7 @@ export default function App() {
     });
   }, [activeTab, categoriesList, collectionsList, categorySortOption, collectionSortOption]);
 
-  const maxApps = 500;
+  const maxApps = isPro ? 500 : 50;
 
   // === 核心過濾與排序邏輯 ===
   const filteredAndSortedApps = useMemo(() => {
@@ -745,7 +935,7 @@ export default function App() {
                 }}
                 className="bg-indigo-600 text-white px-8 h-11 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20"
               >
-                Edit
+                {t.edit}
               </button>
             </div>
           </div>
@@ -772,7 +962,7 @@ export default function App() {
                 </div>
                 <p className="text-lg text-gray-400 font-medium mb-6 leading-relaxed max-w-2xl">{app.description}</p>
                 <div className="flex gap-3">
-                  {['Design', 'Productivity', 'Vector'].map(tag => (
+                  {app.tags?.map((tag: string) => (
                     <span key={tag} className="bg-gray-50 text-gray-400 border border-gray-100 px-4 py-1.5 rounded-xl text-xs font-bold">{tag}</span>
                   ))}
                 </div>
@@ -784,7 +974,7 @@ export default function App() {
               {[
                 { label: 'iOS App Store', value: '12.4M', icon: Apple, color: 'text-blue-500' },
                 { label: 'Google Play', value: '45.8M', icon: Smartphone, color: 'text-emerald-500' },
-                { label: 'Total Downloads', value: '58.2M', icon: ArrowDownUp, color: 'text-indigo-500' }
+                { label: language === 'en' ? 'Total Downloads' : '總下載量', value: app.downloadsText, icon: ArrowDownUp, color: 'text-indigo-500' }
               ].map((stat, i) => (
                 <div key={i} className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100/50">
                   <div className="flex items-center gap-3 mb-4">
@@ -801,7 +991,7 @@ export default function App() {
               <div className="flex items-center justify-between px-4">
                 <div className="flex items-center gap-3">
                   <ImageIcon className="w-5 h-5 text-gray-400" />
-                  <h3 className="text-lg font-black text-gray-900 tracking-tight">Screenshots</h3>
+                  <h3 className="text-lg font-black text-gray-900 tracking-tight">{language === 'en' ? 'Screenshots' : '應用截圖'}</h3>
                 </div>
                 <div className="flex gap-2">
                   <button className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors shadow-sm">
@@ -846,7 +1036,7 @@ export default function App() {
             <div className="space-y-6">
               <div className="flex items-center gap-3 px-4">
                 <Layers className="w-5 h-5 text-gray-400" />
-                <h3 className="text-lg font-black text-gray-900 tracking-tight">Key Features</h3>
+                <h3 className="text-lg font-black text-gray-900 tracking-tight">{t.features}</h3>
               </div>
               <div className="space-y-6">
                 {app.features && app.features.length > 0 ? (
@@ -872,7 +1062,7 @@ export default function App() {
                     <div key={i} className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-gray-100/50 flex gap-10 items-center">
                       <div className="w-24 h-24 rounded-3xl bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-300">
                         <ImageIcon className="w-6 h-6 mb-2" />
-                        <span className="text-[8px] font-black uppercase tracking-widest">No Image</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest">{t.noImage}</span>
                       </div>
                       <div>
                         <h4 className="text-xl font-black text-gray-900 mb-2 tracking-tight">Feature Title</h4>
@@ -894,7 +1084,7 @@ export default function App() {
                   <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center">
                     <Wallet className="w-6 h-6 text-indigo-400" />
                   </div>
-                  <h3 className="text-2xl font-black tracking-tight">Business Model</h3>
+                  <h3 className="text-2xl font-black tracking-tight">{t.businessModel}</h3>
                 </div>
                 <p className="text-sm text-gray-400 leading-relaxed mb-12 font-medium max-w-2xl">
                   {app.businessModel?.description || 'No business model description provided.'}
@@ -902,7 +1092,7 @@ export default function App() {
                 
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">
-                    <Building2 className="w-4 h-4" /> Subscription Plans
+                    <Building2 className="w-4 h-4" /> {t.tiers}
                   </div>
                   <div className="grid grid-cols-2 gap-8">
                     {app.businessModel?.tiers && app.businessModel.tiers.length > 0 ? (
@@ -940,7 +1130,7 @@ export default function App() {
           <div className="space-y-8">
             {/* Publisher */}
             <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100/50">
-              <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-6">Publisher</p>
+              <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-6">{t.publisher}</p>
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center">
                   <Building2 className="w-6 h-6 text-gray-300" />
@@ -954,7 +1144,7 @@ export default function App() {
 
             {/* Brand Palette */}
             <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100/50">
-              <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-6">Extracted Brand Palette</p>
+              <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-6">{t.brandPalette}</p>
               <div className="flex flex-wrap gap-3">
                 {app.hexColors && app.hexColors.length > 0 ? (
                   app.hexColors.map((hex: string, i: number) => (
@@ -979,14 +1169,14 @@ export default function App() {
             {/* Metadata */}
             <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100/50 space-y-8">
               <div>
-                <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-4">Metadata</p>
+                <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-4">{t.metadata}</p>
                 <div className="space-y-6">
                   <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3">Category</p>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3">{t.categories}</p>
                     <span className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-[11px] font-bold">{app.category}</span>
                   </div>
                   <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3">Tags</p>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3">{t.tags}</p>
                     <div className="flex flex-wrap gap-2">
                       {app.tags && app.tags.length > 0 ? (
                         app.tags.map((tag: string) => (
@@ -1008,7 +1198,7 @@ export default function App() {
               <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-2xl rounded-full -mr-12 -mt-12"></div>
               <div className="flex items-center gap-3 mb-3">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                <h4 className="text-xs font-black text-emerald-700 uppercase tracking-widest">Changes Saved</h4>
+                <h4 className="text-xs font-black text-emerald-700 uppercase tracking-widest">{t.changesSaved}</h4>
               </div>
               <p className="text-[10px] text-emerald-600/80 font-medium leading-relaxed">
                 You are currently editing this product. Click 'Confirm Changes' below to persist data to the main database.
@@ -1049,7 +1239,7 @@ export default function App() {
             <Search className="w-4 h-4 text-gray-400 absolute left-3" />
             <input
               type="text"
-              placeholder="Search apps"
+              placeholder={t.search}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-gray-100/80 text-sm rounded-xl py-2.5 pl-9 pr-4 outline-none focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-gray-400"
@@ -1059,22 +1249,16 @@ export default function App() {
 
         <div className="px-4 mb-4 flex flex-col gap-1">
           <button 
-            onClick={() => setActiveTab('subscription')}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors w-full text-left text-sm font-medium ${activeTab === 'subscription' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-500 hover:bg-gray-50'}`}
-          >
-            <Zap className={`w-4 h-4 ${activeTab === 'subscription' ? 'text-indigo-600' : ''}`} /> Subscription
-          </button>
-          <button 
             onClick={() => setActiveTab('collections')}
             className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors w-full text-left text-sm font-medium ${activeTab === 'collections' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-500 hover:bg-gray-50'}`}
           >
-            <Layers className={`w-4 h-4 ${activeTab === 'collections' ? 'text-indigo-600' : ''}`} /> Collections
+            <Layers className={`w-4 h-4 ${activeTab === 'collections' ? 'text-indigo-600' : ''}`} /> {t.collections}
           </button>
           <button 
             onClick={() => setActiveTab('categories')}
             className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors w-full text-left text-sm font-medium ${activeTab === 'categories' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-500 hover:bg-gray-50'}`}
           >
-            <LayoutGrid className={`w-4 h-4 ${activeTab === 'categories' ? 'text-indigo-600' : ''}`} /> Categories
+            <LayoutGrid className={`w-4 h-4 ${activeTab === 'categories' ? 'text-indigo-600' : ''}`} /> {t.categories}
           </button>
         </div>
 
@@ -1091,7 +1275,7 @@ export default function App() {
             >
               <div className="flex items-center gap-3">
                 <cat.icon className={`w-4 h-4 ${activeTab === 'all' && activeCategory === cat.name ? 'text-indigo-600' : ''}`} />
-                <span>{cat.name}</span>
+                <span>{categoryTranslations[language][cat.name] || cat.name}</span>
               </div>
               <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] text-gray-400 font-bold min-w-[30px] text-center">
                 {activeTab === 'collections' ? (groupCounts[`col_${cat.name}`] || 0) : (groupCounts[cat.name] || 0)}
@@ -1101,28 +1285,58 @@ export default function App() {
         </div>
 
         <div className="p-6 border-t border-gray-100 bg-white">
-          <div className="flex items-center justify-between text-[11px] mb-3 font-bold">
-            <span className="text-gray-400 tracking-wider">{apps.length} / {maxApps} Apps Added</span>
-            <span className="text-indigo-600">{Math.round((apps.length / maxApps) * 100)}%</span>
-          </div>
-          <div className="w-full h-1.5 bg-gray-100 rounded-full mb-6 overflow-hidden">
-            <div 
-              className="h-full bg-indigo-600 rounded-full transition-all duration-500" 
-              style={{ width: `${(apps.length / maxApps) * 100}%` }}
-            ></div>
-          </div>
-          {isPro ? (
-            <div className="w-full bg-emerald-50 text-emerald-600 py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm font-black border border-emerald-100">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              PRO STATUS ACTIVE
+          {isLoggedIn ? (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between text-[11px] font-bold">
+                <span className="text-gray-400 tracking-wider">{apps.length} / {maxApps} {t.appsAdded}</span>
+                <span className="text-indigo-600">{Math.round((apps.length / maxApps) * 100)}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-indigo-600 rounded-full transition-all duration-500" 
+                  style={{ width: `${(apps.length / maxApps) * 100}%` }}
+                ></div>
+              </div>
+
+              <button 
+                onClick={() => setShowUserCenter(true)}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-all group border border-transparent hover:border-gray-200"
+              >
+                <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-indigo-600 font-black text-lg border border-gray-100">
+                  {user?.email?.[0].toUpperCase() || user?.phone?.[0] || 'U'}
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-xs font-black text-gray-900 truncate max-w-[120px]">{user?.email || user?.phone}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className={`w-1.5 h-1.5 rounded-full ${isPro ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{isPro ? t.pro : t.free}</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-900 transition-colors" />
+              </button>
             </div>
           ) : (
-            <button 
-              onClick={() => setShowProModal(true)}
-              className="w-full bg-[#0B1021] text-white py-3.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:bg-gray-900 transition-colors"
-            >
-              <Zap className="w-4 h-4 fill-current text-yellow-400" /> PRO
-            </button>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-[11px] font-bold">
+                <span className="text-gray-400 tracking-wider">{apps.length} / {maxApps} {t.appsAdded}</span>
+                <span className="text-indigo-600">{Math.round((apps.length / maxApps) * 100)}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-indigo-600 rounded-full transition-all duration-500" 
+                  style={{ width: `${(apps.length / maxApps) * 100}%` }}
+                ></div>
+              </div>
+              <button 
+                onClick={() => {
+                  setAuthMode('login');
+                  setShowAuthModal(true);
+                }}
+                className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-2xl bg-black text-white hover:bg-gray-800 transition-all text-xs font-black uppercase tracking-widest shadow-xl shadow-black/10"
+              >
+                <Users className="w-4 h-4" /> {t.login}
+              </button>
+            </div>
           )}
         </div>
       </aside>
@@ -1133,8 +1347,8 @@ export default function App() {
           <>
             <div className="flex items-start justify-between mb-8">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">{activeCategory}</h2>
-                <p className="text-sm text-gray-400 font-medium">{filteredAndSortedApps.length} results founded</p>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">{activeCategory === 'All' ? t.all : activeCategory}</h2>
+                <p className="text-sm text-gray-400 font-medium">{filteredAndSortedApps.length} {t.results}</p>
               </div>
               <div className="flex items-center gap-3">
                 <button 
@@ -1173,7 +1387,7 @@ export default function App() {
                   }}
                   className="bg-black text-white px-6 h-11 rounded-xl shadow-sm flex items-center gap-2 text-sm font-bold hover:bg-gray-800 transition-all active:scale-95 ml-2"
                 >
-                  <Plus className="w-4 h-4" strokeWidth={3} /> Add App
+                  <Plus className="w-4 h-4" strokeWidth={3} /> {t.addApp}
                 </button>
               </div>
             </div>
@@ -1183,9 +1397,9 @@ export default function App() {
               <div className="bg-white rounded-[2rem] px-6 py-4 shadow-sm flex flex-col gap-4 border border-gray-100/50 flex-1 transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-6">
-                    <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">Color</span>
-                    <div className="flex flex-wrap items-center gap-3">
-                      {(isColorExpanded ? usedColorGroups : usedColorGroups.slice(0, 12)).map((groupName) => (
+                    <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">{t.color}</span>
+                    <div className={`flex flex-wrap items-center gap-3 transition-all duration-300 ${isColorExpanded ? 'max-h-[200px]' : 'max-h-[32px] overflow-hidden'}`}>
+                      {usedColorGroups.map((groupName) => (
                         <button
                           key={groupName}
                           onClick={() => {
@@ -1204,23 +1418,21 @@ export default function App() {
                   </div>
                   
                   {/* 展開按鈕 */}
-                  {usedColorGroups.length > 12 && (
-                    <button 
-                      onClick={() => setIsColorExpanded(!isColorExpanded)}
-                      className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-indigo-600 transition-all"
-                    >
-                      <ChevronDown className={`w-4 h-4 transition-transform ${isColorExpanded ? 'rotate-180' : ''}`} />
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => setIsColorExpanded(!isColorExpanded)}
+                    className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-indigo-600 transition-all ml-4"
+                  >
+                    <ChevronDown className={`w-4 h-4 transition-transform ${isColorExpanded ? 'rotate-180' : ''}`} />
+                  </button>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <CustomSelect 
-                  label="Year"
+                  label={t.year}
                   value={activeYear}
                   options={[
-                    { label: 'All', value: null },
+                    { label: t.all, value: null },
                     ...Array.from(new Set(apps.map(app => new Date(app.releaseDate).getFullYear()))).sort((a, b) => (b as number) - (a as number)).map(year => ({ label: year.toString(), value: year }))
                   ]}
                   onChange={(val) => {
@@ -1230,12 +1442,14 @@ export default function App() {
                   className="w-32"
                 />
                 <CustomSelect 
-                  label="Month"
+                  label={t.month}
                   value={activeMonth}
                   options={[
-                    { label: 'All', value: null },
+                    { label: t.all, value: null },
                     ...Array.from({ length: 12 }, (_, i) => ({ 
-                      label: new Date(2000, i).toLocaleString('default', { month: 'short' }), 
+                      label: language === 'en' 
+                        ? new Date(2000, i).toLocaleString('en-US', { month: 'short' })
+                        : new Date(2000, i).toLocaleString('zh-CN', { month: 'short' }), 
                       value: i + 1 
                     }))
                   ]}
@@ -1282,12 +1496,12 @@ export default function App() {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-start justify-between mb-12">
               <div>
-                <h2 className="text-4xl font-black text-gray-900 mb-3 tracking-tight">Manage {activeTab === 'categories' ? 'Categories' : 'Collections'}</h2>
-                <p className="text-sm text-gray-400 font-bold uppercase tracking-widest">Organize your application groups</p>
+                <h2 className="text-4xl font-black text-gray-900 mb-3 tracking-tight">{t.manage} {activeTab === 'categories' ? t.categories : t.collections}</h2>
+                <p className="text-sm text-gray-400 font-bold uppercase tracking-widest">{t.organize}</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="bg-white rounded-2xl px-6 py-3 shadow-sm border border-gray-100/50 flex items-center gap-3">
-                  <span className="text-xs font-bold text-gray-400 uppercase">Sort</span>
+                  <span className="text-xs font-bold text-gray-400 uppercase">{t.sort}</span>
                   <button 
                     onClick={() => {
                       if (activeTab === 'categories') {
@@ -1312,7 +1526,7 @@ export default function App() {
                   }}
                   className="bg-indigo-600 text-white px-8 h-14 rounded-2xl shadow-lg shadow-indigo-200 flex items-center gap-3 text-sm font-bold hover:bg-indigo-700 transition-all active:scale-95"
                 >
-                  <Plus className="w-5 h-5" strokeWidth={3} /> Add {activeTab === 'categories' ? 'Category' : 'Collection'}
+                  <Plus className="w-5 h-5" strokeWidth={3} /> {activeTab === 'categories' ? t.addCategory : t.addCollection}
                 </button>
               </div>
             </div>
@@ -1460,28 +1674,28 @@ export default function App() {
                     )}
                   </div>
                   {/* 顏色選擇 */}
-                  {newAppLogo && (
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="flex flex-wrap justify-center gap-2.5 max-w-[180px]">
-                        {extractedColors.map((hex, idx) => (
-                          <div 
-                            key={idx} 
-                            onClick={() => {
-                              if (newAppHexColors.includes(hex)) {
-                                setNewAppHexColors(newAppHexColors.filter(c => c !== hex));
-                              } else {
-                                setNewAppHexColors([...newAppHexColors, hex]);
-                              }
-                            }}
-                            title={getColorGroup(hex)}
-                            className={`w-7 h-7 rounded-full border-2 shadow-sm cursor-pointer transition-all hover:scale-110 ${newAppHexColors.includes(hex) ? 'border-indigo-600 scale-110 ring-2 ring-indigo-100' : 'border-white opacity-40'}`} 
-                            style={{ backgroundColor: hex }}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Select Brand Colors</span>
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="flex flex-wrap justify-center gap-2.5 max-w-[220px]">
+                      {(newAppLogo ? extractedColors : Object.values(groupToHex)).map((hex, idx) => (
+                        <div 
+                          key={idx} 
+                          onClick={() => {
+                            if (newAppHexColors.includes(hex)) {
+                              setNewAppHexColors(newAppHexColors.filter(c => c !== hex));
+                            } else {
+                              setNewAppHexColors([...newAppHexColors, hex]);
+                            }
+                          }}
+                          title={getColorGroup(hex)}
+                          className={`w-7 h-7 rounded-full border-2 shadow-sm cursor-pointer transition-all hover:scale-110 ${newAppHexColors.includes(hex) ? 'border-indigo-600 scale-110 ring-2 ring-indigo-100' : 'border-white opacity-40'}`} 
+                          style={{ backgroundColor: hex }}
+                        />
+                      ))}
                     </div>
-                  )}
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      {newAppLogo ? 'Select Brand Colors' : 'Choose App Colors'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* 輸入欄位 */}
@@ -2159,27 +2373,27 @@ export default function App() {
                 <div className="flex flex-col flex-1 pt-2 pr-32">
                   <div className="flex items-center gap-3 mb-2">
                     <h2 className="text-3xl font-black text-gray-900">{selectedApp.name}</h2>
-                    {selectedApp.isPro && <span className="bg-indigo-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full tracking-wider">PRO</span>}
+                    {selectedApp.isPro && <span className="bg-indigo-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full tracking-wider">{t.pro}</span>}
                   </div>
                   <p className="text-gray-400 text-base font-medium mb-5">{selectedApp.description}</p>
                   <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2 text-xs font-black text-gray-600 bg-white px-4 py-2 rounded-xl border border-gray-100"><LayoutGrid className="w-4 h-4 text-indigo-500" />{selectedApp.category}</div>
+                    <div className="flex items-center gap-2 text-xs font-black text-gray-600 bg-white px-4 py-2 rounded-xl border border-gray-100"><LayoutGrid className="w-4 h-4 text-indigo-500" />{categoryTranslations[language][selectedApp.category] || selectedApp.category}</div>
                     {selectedApp.tags.map((tag: string) => <span key={tag} className="text-xs font-black text-indigo-500 bg-indigo-50/50 px-4 py-2 rounded-xl border border-indigo-100">{tag}</span>)}
                   </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-6">
                 <div className="bg-white border border-gray-100 rounded-3xl p-8 flex items-center justify-between shadow-sm">
-                  <div><p className="text-[10px] font-black text-gray-300 tracking-widest mb-2 uppercase">Total Downloads</p><div className="flex items-baseline gap-2"><span className="text-3xl font-black text-gray-900">{selectedApp.downloadsText.split(' ')[0]}</span><span className="text-gray-400 font-bold">{selectedApp.downloadsText.split(' ')[1] || ''}</span></div></div>
+                  <div><p className="text-[10px] font-black text-gray-300 tracking-widest mb-2 uppercase">{t.totalDownloads}</p><div className="flex items-baseline gap-2"><span className="text-3xl font-black text-gray-900">{selectedApp.downloadsText.split(' ')[0]}</span><span className="text-gray-400 font-bold">{selectedApp.downloadsText.split(' ')[1] || ''}</span></div></div>
                   <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500"><Download className="w-6 h-6" /></div>
                 </div>
                 <div className="bg-white border border-gray-100 rounded-3xl p-8 flex items-center justify-between shadow-sm">
-                  <div><p className="text-[10px] font-black text-gray-300 tracking-widest mb-2 uppercase">Product Age</p><div className="flex items-baseline gap-2"><span className="text-3xl font-black text-gray-900">{selectedApp.ageText}</span><span className="text-gray-400 font-bold">since launch</span></div></div>
+                  <div><p className="text-[10px] font-black text-gray-300 tracking-widest mb-2 uppercase">{t.productAge}</p><div className="flex items-baseline gap-2"><span className="text-3xl font-black text-gray-900">{selectedApp.ageText}</span><span className="text-gray-400 font-bold">{language === 'en' ? 'since launch' : '自發佈以來'}</span></div></div>
                   <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500"><Clock className="w-6 h-6" /></div>
                 </div>
               </div>
               <div>
-                <p className="text-[10px] font-black text-gray-300 tracking-widest mb-6 uppercase ml-2">Screenshots</p>
+                <p className="text-[10px] font-black text-gray-300 tracking-widest mb-6 uppercase ml-2">{language === 'en' ? 'Screenshots' : '應用截圖'}</p>
                 <div className="grid grid-cols-4 gap-6">
                   {selectedApp.screenshots && selectedApp.screenshots.length > 0 ? (
                     selectedApp.screenshots.map((src: string, i: number) => (
@@ -2200,89 +2414,121 @@ export default function App() {
               <div className="grid grid-cols-2 gap-12 mt-4">
                 {/* Key Features */}
                 <div>
-                  <p className="text-[10px] font-black text-gray-300 tracking-widest mb-6 uppercase ml-2">Key Features</p>
-                  <div className="space-y-6">
-                    {selectedApp.features && selectedApp.features.length > 0 ? (
-                      selectedApp.features.map((feature: any, idx: number) => (
-                        <div key={idx} className="flex gap-4 p-4 bg-white rounded-2xl border border-gray-50 shadow-sm">
-                          <div className="w-16 h-16 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                            {feature.image ? (
-                              <img src={feature.image} className="w-full h-full object-cover" alt={feature.title} />
-                            ) : (
-                              <CheckCircle2 className="w-6 h-6 text-indigo-500" />
-                            )}
+                  <p className="text-[10px] font-black text-gray-300 tracking-widest mb-6 uppercase ml-2">{t.features}</p>
+                  {!isPro ? (
+                    <div className="bg-gray-50 rounded-2xl p-8 border border-dashed border-gray-200 text-center">
+                      <Zap className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                      <p className="text-xs font-bold text-gray-400 mb-4">{language === 'en' ? 'Key Features are locked for Free users' : '核心功能對免費用戶鎖定'}</p>
+                      <button 
+                        onClick={() => {
+                          setSelectedApp(null);
+                          setShowProModal(true);
+                        }}
+                        className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline"
+                      >
+                        {t.upgradeToVIP}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {selectedApp.features && selectedApp.features.length > 0 ? (
+                        selectedApp.features.map((feature: any, idx: number) => (
+                          <div key={idx} className="flex gap-4 p-4 bg-white rounded-2xl border border-gray-50 shadow-sm">
+                            <div className="w-16 h-16 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                              {feature.image ? (
+                                <img src={feature.image} className="w-full h-full object-cover" alt={feature.title} />
+                              ) : (
+                                <CheckCircle2 className="w-6 h-6 text-indigo-500" />
+                              )}
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-bold text-gray-900 mb-1">{feature.title}</h4>
+                              <p className="text-[11px] text-gray-400 leading-relaxed font-medium">{feature.description}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="text-sm font-bold text-gray-900 mb-1">{feature.title}</h4>
-                            <p className="text-[11px] text-gray-400 leading-relaxed font-medium">{feature.description}</p>
+                        ))
+                      ) : (
+                        [
+                          { title: 'Lightning Command Menu', desc: 'Quickly perform any action with simple keyboard shortcuts and a unified search interface.' },
+                          { title: 'Ecosystem Integration', desc: 'Seamlessly connect with Google Calendar, Outlook, Notion, and major video conferencing tools.' }
+                        ].map((feature, idx) => (
+                          <div key={idx} className="flex gap-4">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                              <CheckCircle2 className="w-4 h-4 text-indigo-500" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-bold text-gray-900 mb-1">{feature.title}</h4>
+                              <p className="text-[11px] text-gray-400 leading-relaxed font-medium">{feature.desc}</p>
+                            </div>
                           </div>
-                        </div>
-                      ))
-                    ) : (
-                      [
-                        { title: 'Lightning Command Menu', desc: 'Quickly perform any action with simple keyboard shortcuts and a unified search interface.' },
-                        { title: 'Ecosystem Integration', desc: 'Seamlessly connect with Google Calendar, Outlook, Notion, and major video conferencing tools.' }
-                      ].map((feature, idx) => (
-                        <div key={idx} className="flex gap-4">
-                          <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                            <CheckCircle2 className="w-4 h-4 text-indigo-500" />
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-bold text-gray-900 mb-1">{feature.title}</h4>
-                            <p className="text-[11px] text-gray-400 leading-relaxed font-medium">{feature.desc}</p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Business Model */}
                 <div>
-                  <p className="text-[10px] font-black text-gray-300 tracking-widest mb-6 uppercase ml-2">Business Model</p>
-                  <div className="bg-[#15162B] rounded-[2rem] p-8 text-white relative overflow-hidden">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                        <Wallet className="w-5 h-5 text-indigo-400" />
-                      </div>
-                      <h3 className="text-lg font-black tracking-tight">Business Model</h3>
+                  <p className="text-[10px] font-black text-gray-300 tracking-widest mb-6 uppercase ml-2">{t.businessModel}</p>
+                  {!isPro ? (
+                    <div className="bg-[#15162B] rounded-[2rem] p-8 text-center border border-white/5">
+                      <Wallet className="w-8 h-8 text-gray-600 mx-auto mb-3" />
+                      <p className="text-xs font-bold text-gray-500 mb-4">{language === 'en' ? 'Business Model details are locked' : '商業模式詳情已鎖定'}</p>
+                      <button 
+                        onClick={() => {
+                          setSelectedApp(null);
+                          setShowProModal(true);
+                        }}
+                        className="text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:underline"
+                      >
+                        {t.upgradeToVIP}
+                      </button>
                     </div>
-                    <p className="text-xs text-gray-400 leading-relaxed mb-8 font-medium">
-                      {selectedApp.businessModel?.description || 'No business model description provided.'}
-                    </p>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                        <Building2 className="w-3 h-3" /> Subscription Plans
+                  ) : (
+                    <div className="bg-[#15162B] rounded-[2rem] p-8 text-white relative overflow-hidden">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                          <Wallet className="w-5 h-5 text-indigo-400" />
+                        </div>
+                        <h3 className="text-lg font-black tracking-tight">Business Model</h3>
                       </div>
+                      <p className="text-xs text-gray-400 leading-relaxed mb-8 font-medium">
+                        {selectedApp.businessModel?.description || 'No business model description provided.'}
+                      </p>
+                      
                       <div className="space-y-4">
-                        {selectedApp.businessModel?.tiers && selectedApp.businessModel.tiers.length > 0 ? (
-                          selectedApp.businessModel.tiers.map((tier: any, i: number) => (
-                            <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                              <div className="flex items-baseline gap-2 mb-4">
-                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{tier.name}</span>
-                                <div className="flex items-baseline gap-1">
-                                  <span className="text-2xl font-black">{tier.currency || '$'}{tier.price}</span>
-                                  <span className="text-[10px] text-gray-500 font-bold">/{tier.cycle}</span>
+                        <div className="flex items-center gap-2 text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                          <Building2 className="w-3 h-3" /> Subscription Plans
+                        </div>
+                        <div className="space-y-4">
+                          {selectedApp.businessModel?.tiers && selectedApp.businessModel.tiers.length > 0 ? (
+                            selectedApp.businessModel.tiers.map((tier: any, i: number) => (
+                              <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                                <div className="flex items-baseline gap-2 mb-4">
+                                  <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{tier.name}</span>
+                                  <div className="flex items-baseline gap-1">
+                                    <span className="text-2xl font-black">{tier.currency || '$'}{tier.price}</span>
+                                    <span className="text-[10px] text-gray-500 font-bold">/{tier.cycle}</span>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  {tier.benefits.split('\n').filter((b: string) => b.trim()).map((item: string, j: number) => (
+                                    <div key={j} className="flex items-center gap-2 text-[11px] text-gray-300 font-medium">
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" /> {item}
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
-                              <div className="space-y-2">
-                                {tier.benefits.split('\n').filter((b: string) => b.trim()).map((item: string, j: number) => (
-                                  <div key={j} className="flex items-center gap-2 text-[11px] text-gray-300 font-medium">
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" /> {item}
-                                  </div>
-                                ))}
-                              </div>
+                            ))
+                          ) : (
+                            <div className="bg-white/5 border border-white/10 border-dashed rounded-2xl p-6 text-center text-gray-500 font-bold text-[10px]">
+                              No subscription plans added yet.
                             </div>
-                          ))
-                        ) : (
-                          <div className="bg-white/5 border border-white/10 border-dashed rounded-2xl p-6 text-center text-gray-500 font-bold text-[10px]">
-                            No subscription plans added yet.
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2638,17 +2884,17 @@ export default function App() {
               <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
                 <Zap className="w-6 h-6 text-white fill-current" />
               </div>
-              <h2 className="text-3xl font-black mb-4 tracking-tight">Go Pro</h2>
+              <h2 className="text-3xl font-black mb-4 tracking-tight">Go VIP</h2>
               <p className="text-indigo-100 text-sm font-medium mb-10 leading-relaxed">
                 Unlock full potential with our premium features designed for power users.
               </p>
               <div className="space-y-4">
                 {[
-                  'Unlimited App Additions',
-                  'Advanced Color Analytics',
-                  'Custom Collection Branding',
-                  'Export Data to JSON/CSV',
-                  'Priority AI Support'
+                  t.limit === 'Limit' ? 'Up to 500 App Additions' : '最多添加 500 個應用',
+                  t.unlock + ' ' + t.features,
+                  t.unlock + ' ' + t.businessModel,
+                  t.branding,
+                  t.priority
                 ].map((feature, i) => (
                   <div key={i} className="flex items-center gap-3 text-sm font-bold">
                     <CheckCircle2 className="w-5 h-5 text-indigo-300" />
@@ -2660,19 +2906,18 @@ export default function App() {
 
             {/* Right Side: Plans & Payment */}
             <div className="flex-1 p-10 bg-white">
-              <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest mb-6">Select a Plan</h3>
+              <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest mb-6">{t.selectPlan}</h3>
               <div className="space-y-3 mb-8">
                 {[
-                  { id: 'Monthly', price: '$12', cycle: 'month' },
-                  { id: '1 Year', price: '$99', cycle: 'year', discount: 'Save 30%' },
-                  { id: '3 Years', price: '$199', cycle: '3 years', discount: 'Save 50%', popular: true }
+                  { id: 'Monthly', price: '￥5', cycle: t.month },
+                  { id: 'Half Year', price: '￥20', cycle: language === 'en' ? '6 months' : '6 個月', discount: 'Save 33%', popular: true }
                 ].map((plan) => (
                   <div 
                     key={plan.id}
                     onClick={() => setSelectedPlan(plan.id)}
                     className={`p-4 rounded-2xl border-2 cursor-pointer transition-all relative ${selectedPlan === plan.id ? 'border-indigo-600 bg-indigo-50/30' : 'border-gray-100 hover:border-indigo-100'}`}
                   >
-                    {plan.popular && <div className="absolute -top-2 right-4 bg-red-500 text-white text-[7px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Best Value</div>}
+                    {plan.popular && <div className="absolute -top-2 right-4 bg-red-500 text-white text-[7px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">{t.bestValue}</div>}
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-black text-gray-900">{plan.id}</p>
@@ -2687,7 +2932,7 @@ export default function App() {
                 ))}
               </div>
 
-              <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest mb-4">Payment Method</h3>
+              <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest mb-4">{t.paymentMethod}</h3>
               <div className="grid grid-cols-2 gap-3 mb-8">
                 {['WeChat Pay', 'Alipay'].map(method => (
                   <button 
@@ -2707,8 +2952,241 @@ export default function App() {
                 }}
                 className="w-full bg-black text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-800 transition-all active:scale-95 shadow-xl shadow-black/10"
               >
-                Upgrade Now
+                {t.upgradeNow}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
+          <div className="bg-white w-full max-w-[450px] rounded-[2.5rem] shadow-2xl overflow-hidden p-10 relative animate-in fade-in zoom-in-95 duration-300">
+            <button 
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-6 right-6 w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-200">
+                <Users className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-black text-gray-900 tracking-tight">{authMode === 'login' ? t.welcome : t.signup}</h2>
+              <p className="text-sm text-gray-400 font-medium mt-2">{authMode === 'login' ? 'Please sign in to your account' : 'Create a new account to get started'}</p>
+            </div>
+
+            <div className="flex bg-gray-50 p-1.5 rounded-2xl mb-8">
+              <button 
+                onClick={() => setAuthMethod('email')}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${authMethod === 'email' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                {t.email}
+              </button>
+              <button 
+                onClick={() => setAuthMethod('phone')}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${authMethod === 'phone' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                {t.phone}
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-8">
+              {authMethod === 'email' ? (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest ml-4">{t.email}</label>
+                    <input type="email" placeholder="hello@example.com" className="w-full bg-gray-50 rounded-2xl px-5 py-3.5 outline-none border border-transparent focus:border-indigo-100 transition-all text-sm font-medium" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest ml-4">{t.password}</label>
+                    <input type="password" placeholder="••••••••" className="w-full bg-gray-50 rounded-2xl px-5 py-3.5 outline-none border border-transparent focus:border-indigo-100 transition-all text-sm font-medium" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest ml-4">{t.phoneNumber}</label>
+                    <input type="tel" placeholder="+86 123 4567 8901" className="w-full bg-gray-50 rounded-2xl px-5 py-3.5 outline-none border border-transparent focus:border-indigo-100 transition-all text-sm font-medium" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest ml-4">{t.verificationCode}</label>
+                    <div className="flex gap-3">
+                      <input type="text" placeholder="123456" className="flex-1 bg-gray-50 rounded-2xl px-5 py-3.5 outline-none border border-transparent focus:border-indigo-100 transition-all text-sm font-medium" />
+                      <button className="px-4 bg-white border border-gray-100 rounded-2xl text-[10px] font-black text-indigo-600 hover:bg-indigo-50 transition-colors whitespace-nowrap uppercase tracking-widest">{t.sendCode}</button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button 
+              onClick={() => {
+                setIsLoggedIn(true);
+                setUser(authMethod === 'email' ? { email: 'user@example.com' } : { phone: '12345678901' });
+                setShowAuthModal(false);
+              }}
+              className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95 shadow-xl shadow-indigo-600/20 mb-6"
+            >
+              {authMode === 'login' ? t.loginBtn : t.signup}
+            </button>
+
+            <p className="text-center text-xs text-gray-400 font-bold">
+              {authMode === 'login' ? t.noAccount : t.hasAccount}{' '}
+              <button 
+                onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                className="text-indigo-600 hover:underline"
+              >
+                {authMode === 'login' ? t.signup : t.loginBtn}
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* User Center Modal */}
+      {showUserCenter && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
+          <div className="bg-[#F8F9FD] w-full max-w-[540px] rounded-[3rem] shadow-2xl overflow-hidden relative animate-in fade-in zoom-in-95 duration-300 border border-white/20">
+            {/* Header with Background Pattern */}
+            <div className="h-48 bg-indigo-600 relative overflow-hidden">
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute top-0 left-0 w-full h-full" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+              </div>
+              <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-white/10 blur-[80px] rounded-full"></div>
+              <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-400/20 blur-[80px] rounded-full"></div>
+              
+              <button 
+                onClick={() => setShowUserCenter(false)}
+                className="absolute top-8 right-8 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/20 transition-all z-20"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-[#F8F9FD] to-transparent"></div>
+            </div>
+
+            <div className="px-12 pb-12 -mt-20 relative z-10">
+              {/* Profile Section */}
+              <div className="flex items-end gap-6 mb-10">
+                <div className="w-32 h-32 rounded-[2.5rem] bg-white p-2 shadow-2xl shadow-indigo-200/50">
+                  <div className="w-full h-full rounded-[2rem] bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center text-indigo-600 text-4xl font-black border border-indigo-50">
+                    {user?.email?.[0].toUpperCase() || user?.phone?.[0] || 'U'}
+                  </div>
+                </div>
+                <div className="pb-4">
+                  <h2 className="text-2xl font-black text-gray-900 tracking-tight mb-1">{user?.email || user?.phone}</h2>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 bg-white px-3 py-1 rounded-full shadow-sm border border-gray-100">
+                      <div className={`w-1.5 h-1.5 rounded-full ${isPro ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                      <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                        {isPro ? t.vip : t.free}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-gray-300 font-bold tracking-wider">ID: #8520</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-8">
+                {/* Subscription Card */}
+                <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 blur-3xl rounded-full -mr-16 -mt-16 transition-all group-hover:bg-indigo-100"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                          <Zap className={`w-6 h-6 ${isPro ? 'text-indigo-600 fill-indigo-600' : 'text-gray-300'}`} />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">{t.subscription}</h3>
+                          <p className="text-[11px] text-gray-400 font-bold mt-0.5">{isPro ? t.proActive : 'Upgrade for more features'}</p>
+                        </div>
+                      </div>
+                      {isPro && (
+                        <div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-100">
+                          Active
+                        </div>
+                      )}
+                    </div>
+
+                    {!isPro ? (
+                      <button 
+                        onClick={() => {
+                          setShowUserCenter(false);
+                          setShowProModal(true);
+                        }}
+                        className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2"
+                      >
+                        <Zap className="w-4 h-4 fill-white" />
+                        {t.upgradeToVIP}
+                      </button>
+                    ) : (
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                        <div className="flex items-center gap-3">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          <span className="text-xs font-bold text-gray-500">Next billing: Mar 26, 2026</span>
+                        </div>
+                        <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">Manage</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Settings Section */}
+                <div className="space-y-4">
+                  <h3 className="text-[10px] font-black text-gray-300 uppercase tracking-widest ml-4">{t.settings}</h3>
+                  
+                  <div className="bg-white rounded-[2.5rem] p-4 shadow-sm border border-gray-100 space-y-2">
+                    <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-transparent hover:border-gray-100 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
+                          <Globe className="w-5 h-5 text-gray-400" />
+                        </div>
+                        <span className="text-sm font-bold text-gray-700">{t.language}</span>
+                      </div>
+                      <div className="flex bg-white p-1 rounded-xl border border-gray-100 shadow-sm">
+                        <button 
+                          onClick={() => setLanguage('zh')}
+                          className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all ${language === 'zh' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-gray-400 hover:text-gray-600'}`}
+                        >
+                          中文
+                        </button>
+                        <button 
+                          onClick={() => setLanguage('en')}
+                          className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all ${language === 'en' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-gray-400 hover:text-gray-600'}`}
+                        >
+                          EN
+                        </button>
+                      </div>
+                    </div>
+
+                    <button className="w-full flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-transparent hover:border-gray-100 transition-all group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
+                          <ShieldCheck className="w-5 h-5 text-gray-400" />
+                        </div>
+                        <span className="text-sm font-bold text-gray-700">{language === 'en' ? 'Security & Privacy' : '安全與隱私'}</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-900 transition-colors" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Logout Button */}
+                <button 
+                  onClick={() => {
+                    setIsLoggedIn(false);
+                    setUser(null);
+                    setShowUserCenter(false);
+                  }}
+                  className="w-full py-5 rounded-[2rem] bg-white border border-red-100 text-red-500 text-xs font-black uppercase tracking-widest hover:bg-red-50 transition-all active:scale-95 shadow-sm"
+                >
+                  {t.logout}
+                </button>
+              </div>
             </div>
           </div>
         </div>
