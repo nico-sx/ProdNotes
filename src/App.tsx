@@ -1147,14 +1147,14 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-8">
               {filteredAndSortedApps.map((app) => (
                 <div key={app.id} onClick={() => setSelectedApp(app)} className="flex flex-col group cursor-pointer relative">
-                  <div className="bg-white rounded-[2.5rem] aspect-square p-0 shadow-sm mb-4 relative transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-2 overflow-hidden">
+                  <div className="bg-white rounded-[2.5rem] aspect-square p-6 shadow-sm mb-4 relative transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-2 overflow-hidden">
                     <button 
                       onClick={(e) => toggleFavorite(e, app.id)}
                       className="absolute top-5 right-5 z-20 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
                     >
                       <Star className={`w-4 h-4 ${app.starred ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
                     </button>
-                    <div className={`w-full h-full rounded-[2rem] flex items-center justify-center text-white ${app.bg} overflow-hidden ${app.logo ? '' : 'p-7'}`}>
+                    <div className={`w-full h-full rounded-[2rem] flex items-center justify-center text-white ${app.bg} overflow-hidden`}>
                       {app.logo ? (
                         <img src={app.logo} className="w-full h-full object-cover" alt={app.name} />
                       ) : (
@@ -1256,14 +1256,18 @@ export default function App() {
                     <span className="text-sm text-gray-400 font-bold">
                       {activeTab === 'collections' ? (groupCounts[`col_${cat.name}`] || 0) : (groupCounts[cat.name] || 0)} Apps
                     </span>
-                    <div className="flex -space-x-2">
+                    <div className="flex -space-x-3">
                       {apps.filter(a => (activeTab === 'collections' ? a.collection : a.category) === cat.name).slice(0, 4).map((app, i) => (
-                        <div key={app.id} className={`w-7 h-7 rounded-lg border-2 border-white flex items-center justify-center text-white text-[8px] font-bold ${app.bg} shadow-sm`}>
-                          <app.icon className="w-3.5 h-3.5" />
+                        <div key={app.id} className={`w-9 h-9 rounded-xl border-2 border-white flex items-center justify-center text-white text-[8px] font-bold ${app.bg} shadow-sm overflow-hidden`}>
+                          {app.logo ? (
+                            <img src={app.logo} className="w-full h-full object-cover" alt={app.name} />
+                          ) : (
+                            <app.icon className="w-4 h-4" />
+                          )}
                         </div>
                       ))}
                       {(activeTab === 'collections' ? (groupCounts[`col_${cat.name}`] || 0) : (groupCounts[cat.name] || 0)) > 4 && (
-                        <div className="w-7 h-7 rounded-lg border-2 border-white bg-gray-100 flex items-center justify-center text-[8px] font-black text-gray-400">
+                        <div className="w-9 h-9 rounded-xl border-2 border-white bg-gray-100 flex items-center justify-center text-[10px] font-black text-gray-400">
                           +{(activeTab === 'collections' ? (groupCounts[`col_${cat.name}`] || 0) : (groupCounts[cat.name] || 0)) - 4}
                         </div>
                       )}
