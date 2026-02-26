@@ -10,6 +10,39 @@ import {
 } from 'lucide-react';
 
 // === 顏色工具函數 ===
+const hexToRgb = (hex: string) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return { r, g, b };
+};
+
+const colorDistance = (c1: { r: number, g: number, b: number }, c2: { r: number, g: number, b: number }) => {
+  return Math.sqrt(Math.pow(c1.r - c2.r, 2) + Math.pow(c1.g - c2.g, 2) + Math.pow(c1.b - c2.b, 2));
+};
+
+const MASTER_PALETTE = [
+  '#000000', '#F25E45', '#F26F3D', '#F27E3C', '#EB8C3C', '#E4963D', '#DDA03E', '#D8A73E', '#B5B03E', '#8FBB40', 
+  '#73BD47', '#4CC05A', '#4AB971', '#47B486', '#48B398', '#47B0A7', '#47B1BE', '#47ADD0', '#45A8DD', '#43A0E9', 
+  '#5291F4', '#5F84F7', '#6D7AF6', '#7B6FF6', '#8D6AF7', '#9B67F7', '#A365F7', '#B160F6', '#C857F3', '#E642EC', 
+  '#EF4BBB', '#F15394', '#F15385', '#F25375'
+];
+
+const getNearestColor = (hex: string) => {
+  if (!hex) return MASTER_PALETTE[0];
+  const target = hexToRgb(hex);
+  let minDistance = Infinity;
+  let nearest = MASTER_PALETTE[0];
+  for (const color of MASTER_PALETTE) {
+    const distance = colorDistance(target, hexToRgb(color));
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearest = color;
+    }
+  }
+  return nearest;
+};
+
 const hexToHsl = (hex: string) => {
   let r = 0, g = 0, b = 0;
   if (hex.length === 4) {
@@ -38,35 +71,13 @@ const hexToHsl = (hex: string) => {
 };
 
 const getColorGroup = (hex: string) => {
-  const { h, s, l } = hexToHsl(hex);
-  if (l < 15) return 'Black';
-  if (l > 85) return 'White';
-  if (s < 15) return 'Gray';
-
-  if (h < 30) return 'Red';
-  if (h < 60) return 'Orange';
-  if (h < 90) return 'Yellow';
-  if (h < 150) return 'Green';
-  if (h < 210) return 'Cyan';
-  if (h < 270) return 'Blue';
-  if (h < 300) return 'Purple';
-  if (h < 335) return 'Pink';
-  return 'Red';
+  return getNearestColor(hex);
 };
 
-const groupToHex: Record<string, string> = {
-  'Red': '#ef4444',
-  'Orange': '#f97316',
-  'Yellow': '#eab308',
-  'Green': '#22c55e',
-  'Cyan': '#06b6d4',
-  'Blue': '#3b82f6',
-  'Purple': '#8b5cf6',
-  'Pink': '#ec4899',
-  'Black': '#000000',
-  'Gray': '#6b7280',
-  'White': '#ffffff'
-};
+const groupToHex: Record<string, string> = MASTER_PALETTE.reduce((acc, color) => {
+  acc[color] = color;
+  return acc;
+}, {} as Record<string, string>);
 
 const extractColorsFromImage = (imageUrl: string): Promise<string[]> => {
   return new Promise((resolve) => {
@@ -340,7 +351,8 @@ export default function App() {
   const [activeMonth, setActiveMonth] = useState<number | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [sortOption, setSortOption] = useState('date-desc');
-  const [activeTab, setActiveTab] = useState<'all' | 'categories' | 'collections' | 'subscription' | 'user-center'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'categories' | 'collections' | 'user-center'>('all');
+  const [activeUserTab, setActiveUserTab] = useState<'payment' | 'usage' | 'subscription'>('usage');
   const [categoriesList, setCategoriesList] = useState(categories);
   const [collectionsList, setCollectionsList] = useState<any[]>([]);
   const [categorySortOption, setCategorySortOption] = useState('name-asc');
@@ -432,6 +444,10 @@ export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
 
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en' ? 'zh' : 'en');
+  };
+
   const t = useMemo(() => {
     const translations: any = {
       en: {
@@ -466,7 +482,22 @@ export default function App() {
         date: 'Date',
         amount: 'Amount',
         plan: 'Plan',
-        manageAccount: 'Manage Account',
+        billing: 'Billing',
+        usage: 'Usage',
+        credits: 'Credits',
+        transactionHistory: 'Transaction History',
+        financialsUsage: 'Financials & Usage',
+        currentPlan: 'Current Plan',
+        product: 'Product',
+        action: 'Action',
+        transactionId: 'Transaction ID',
+        tokenUsage: 'Token Usage',
+        creditsHistory: 'Credits History',
+        userSettings: 'User Settings',
+        profile: 'Profile',
+        general: 'General',
+        saveChanges: 'Save Changes',
+        changeLanguage: 'Change Language',
         phoneNumber: 'Phone Number',
         verificationCode: 'Verification Code',
         sendCode: 'Send Code',
@@ -551,7 +582,22 @@ export default function App() {
         date: '日期',
         amount: '金額',
         plan: '方案',
-        manageAccount: '管理賬戶',
+        billing: '賬單',
+        usage: '用量',
+        credits: '額度',
+        transactionHistory: '交易記錄',
+        financialsUsage: '財務與用量',
+        currentPlan: '當前方案',
+        product: '產品',
+        action: '操作',
+        transactionId: '交易 ID',
+        tokenUsage: 'Token 用量',
+        creditsHistory: '額度記錄',
+        userSettings: '用戶設置',
+        profile: '個人資料',
+        general: '常規設置',
+        saveChanges: '保存更改',
+        changeLanguage: '切換語言',
         email: '郵箱',
         phone: '手機號碼',
         password: '密碼',
@@ -815,6 +861,21 @@ export default function App() {
     setAppToDelete(app);
   };
 
+  const calculateAge = (dateStr: string) => {
+    if (!dateStr) return 'New';
+    const release = new Date(dateStr);
+    const now = new Date();
+    const diffTime = now.getTime() - release.getTime();
+    if (diffTime < 0) return 'Upcoming';
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const years = Math.floor(diffDays / 365);
+    const months = Math.floor((diffDays % 365) / 30);
+    
+    if (years > 0) return `${years}Y ${months}M`;
+    if (months > 0) return `${months}M`;
+    return 'New';
+  };
+
   const confirmDeleteApp = () => {
     if (appToDelete) {
       setApps(apps.filter(a => a.id !== appToDelete.id));
@@ -995,8 +1056,8 @@ export default function App() {
             {/* Stats Grid */}
             <div className="grid grid-cols-3 gap-8">
               {[
-                { label: 'iOS App Store', value: '12.4M', icon: Apple, color: 'text-blue-500' },
-                { label: 'Google Play', value: '45.8M', icon: Smartphone, color: 'text-emerald-500' },
+                { label: 'iOS App Store', value: app.platformDownloads?.iOS ? app.platformDownloads.iOS + ' 万' : '0', icon: Apple, color: 'text-blue-500' },
+                { label: 'Google Play', value: app.platformDownloads?.Android ? app.platformDownloads.Android + ' 万' : '0', icon: Smartphone, color: 'text-emerald-500' },
                 { label: language === 'en' ? 'Total Downloads' : '總下載量', value: app.downloadsText, icon: ArrowDownUp, color: 'text-indigo-500' }
               ].map((stat, i) => (
                 <div key={i} className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100/50">
@@ -1010,60 +1071,41 @@ export default function App() {
             </div>
 
             {/* Screenshots */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between px-4">
-                <div className="flex items-center gap-3">
-                  <ImageIcon className="w-5 h-5 text-gray-400" />
-                  <h3 className="text-lg font-black text-gray-900 tracking-tight">{language === 'en' ? 'Screenshots' : '應用截圖'}</h3>
+            {app.screenshots && app.screenshots.length > 0 && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between px-4">
+                  <div className="flex items-center gap-3">
+                    <ImageIcon className="w-5 h-5 text-gray-400" />
+                    <h3 className="text-lg font-black text-gray-900 tracking-tight">{language === 'en' ? 'Screenshots' : '應用截圖'}</h3>
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors shadow-sm">
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors shadow-sm">
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors shadow-sm">
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors shadow-sm">
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="grid grid-cols-4 gap-8">
-                {app.screenshots && app.screenshots.length > 0 ? (
-                  app.screenshots.map((src: string, i: number) => (
+                <div className="grid grid-cols-4 gap-8">
+                  {app.screenshots.map((src: string, i: number) => (
                     <div key={i} className="bg-white rounded-[2.5rem] aspect-[9/16] shadow-xl border border-gray-100 overflow-hidden group cursor-pointer relative">
                       <img src={src} className="w-full h-full object-cover" alt={`screenshot-${i}`} />
                     </div>
-                  ))
-                ) : (
-                  [1, 2, 3, 4].map(i => (
-                    <div key={i} className="bg-white rounded-[2.5rem] aspect-[9/16] shadow-xl border border-gray-100 overflow-hidden group cursor-pointer relative">
-                      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                      <div className="w-full h-full bg-gray-50 flex items-center justify-center">
-                        <div className="w-4/5 h-4/5 border-4 border-gray-200 rounded-[2rem] relative overflow-hidden">
-                          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1 bg-gray-200 rounded-full"></div>
-                          <div className="p-4 space-y-4">
-                            <div className="h-4 w-2/3 bg-gray-100 rounded-lg"></div>
-                            <div className="h-24 bg-gray-50 rounded-xl"></div>
-                            <div className="space-y-2">
-                              <div className="h-3 w-full bg-gray-100 rounded-lg"></div>
-                              <div className="h-3 w-5/6 bg-gray-100 rounded-lg"></div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Key Features */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 px-4">
-                <Layers className="w-5 h-5 text-gray-400" />
-                <h3 className="text-lg font-black text-gray-900 tracking-tight">{t.features}</h3>
-              </div>
+            {app.features && app.features.length > 0 && (
               <div className="space-y-6">
-                {app.features && app.features.length > 0 ? (
-                  app.features.map((feature: any, i: number) => (
+                <div className="flex items-center gap-3 px-4">
+                  <Layers className="w-5 h-5 text-gray-400" />
+                  <h3 className="text-lg font-black text-gray-900 tracking-tight">{t.features}</h3>
+                </div>
+                <div className="space-y-6">
+                  {app.features.map((feature: any, i: number) => (
                     <div key={i} className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-gray-100/50 flex gap-10 items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
                       <div className={`w-32 h-32 rounded-3xl bg-gray-50 overflow-hidden flex-shrink-0 flex items-center justify-center`}>
                         {feature.image ? (
@@ -1079,74 +1121,59 @@ export default function App() {
                         </p>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  [1, 2].map(i => (
-                    <div key={i} className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-gray-100/50 flex gap-10 items-center">
-                      <div className="w-24 h-24 rounded-3xl bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-300">
-                        <ImageIcon className="w-6 h-6 mb-2" />
-                        <span className="text-[8px] font-black uppercase tracking-widest">{t.noImage}</span>
-                      </div>
-                      <div>
-                        <h4 className="text-xl font-black text-gray-900 mb-2 tracking-tight">Feature Title</h4>
-                        <p className="text-sm text-gray-400 font-medium leading-relaxed max-w-xl">
-                          Add features in the app editor to see them here.
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Business Model */}
-            <div className="bg-[#15162B] rounded-[3rem] p-12 text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 blur-[100px] rounded-full -mr-48 -mt-48"></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center">
-                    <Wallet className="w-6 h-6 text-indigo-400" />
+            {app.businessModel && (app.businessModel.description || (app.businessModel.tiers && app.businessModel.tiers.length > 0)) && (
+              <div className="bg-[#15162B] rounded-[3rem] p-12 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 blur-[100px] rounded-full -mr-48 -mt-48"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center">
+                      <Wallet className="w-6 h-6 text-indigo-400" />
+                    </div>
+                    <h3 className="text-2xl font-black tracking-tight">{t.businessModel}</h3>
                   </div>
-                  <h3 className="text-2xl font-black tracking-tight">{t.businessModel}</h3>
-                </div>
-                <p className="text-sm text-gray-400 leading-relaxed mb-12 font-medium max-w-2xl">
-                  {app.businessModel?.description || 'No business model description provided.'}
-                </p>
-                
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">
-                    <Building2 className="w-4 h-4" /> {t.tiers}
-                  </div>
-                  <div className="grid grid-cols-2 gap-8">
-                    {app.businessModel?.tiers && app.businessModel.tiers.length > 0 ? (
-                      app.businessModel.tiers.map((tier: any, i: number) => (
-                        <div key={i} className="bg-white/5 border border-white/10 rounded-[2.5rem] p-10 relative overflow-hidden">
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full -mr-16 -mt-16"></div>
-                          <div className="mb-8">
-                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 block">{tier.name}</span>
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-4xl font-black">{tier.currency || '$'}{tier.price}</span>
-                              <span className="text-xs text-gray-500 font-bold">/{tier.cycle}</span>
+                  {app.businessModel.description && (
+                    <p className="text-sm text-gray-400 leading-relaxed mb-12 font-medium max-w-2xl">
+                      {app.businessModel.description}
+                    </p>
+                  )}
+                  
+                  {app.businessModel.tiers && app.businessModel.tiers.length > 0 && (
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">
+                        <Building2 className="w-4 h-4" /> {t.tiers}
+                      </div>
+                      <div className="grid grid-cols-2 gap-8">
+                        {app.businessModel.tiers.map((tier: any, i: number) => (
+                          <div key={i} className="bg-white/5 border border-white/10 rounded-[2.5rem] p-10 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full -mr-16 -mt-16"></div>
+                            <div className="mb-8">
+                              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 block">{tier.name}</span>
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-4xl font-black">{tier.currency || '$'}{tier.price}</span>
+                                <span className="text-xs text-gray-500 font-bold">/{tier.cycle}</span>
+                              </div>
+                            </div>
+                            <div className="space-y-4">
+                              {tier.benefits.split('\n').filter((b: string) => b.trim()).map((item: string, j: number) => (
+                                <div key={j} className="flex items-center gap-3 text-xs text-gray-300 font-medium">
+                                  <CheckCircle2 className="w-4 h-4 text-indigo-500" /> {item}
+                                </div>
+                              ))}
                             </div>
                           </div>
-                          <div className="space-y-4">
-                            {tier.benefits.split('\n').filter((b: string) => b.trim()).map((item: string, j: number) => (
-                              <div key={j} className="flex items-center gap-3 text-xs text-gray-300 font-medium">
-                                <CheckCircle2 className="w-4 h-4 text-indigo-500" /> {item}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="col-span-2 bg-white/5 border border-white/10 border-dashed rounded-[2.5rem] p-10 text-center text-gray-500 font-bold">
-                        No subscription plans added yet.
+                        ))}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Right Column (Sidebar) */}
@@ -1286,14 +1313,14 @@ export default function App() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-0.5 custom-scrollbar">
-          {(activeTab === 'collections' ? collectionsList : categoriesList).filter(cat => cat.name === 'All' || (groupCounts[cat.name] || 0) > 0 || (activeTab === 'collections' && (groupCounts[`col_${cat.name}`] || 0) > 0)).map((cat) => (
+          {activeTab !== 'all' && activeTab !== 'user-center' && (activeTab === 'collections' ? collectionsList : categoriesList).filter(cat => cat.name !== 'All' && ((groupCounts[cat.name] || 0) > 0 || (activeTab === 'collections' && (groupCounts[`col_${cat.name}`] || 0) > 0))).map((cat) => (
             <button
               key={cat.name}
               onClick={() => {
                 setActiveCategory(cat.name);
-                setActiveTab('all');
+                // Stay on current tab
               }}
-              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-colors text-sm ${activeTab === 'all' && activeCategory === cat.name ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-500 hover:bg-gray-50'
+              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-colors text-sm ${activeCategory === cat.name ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-500 hover:bg-gray-50'
                 }`}
             >
               <div className="flex items-center gap-3">
@@ -1416,73 +1443,59 @@ export default function App() {
             </div>
 
             {/* 顏色過濾器與年份篩選對齊 */}
-            <div className="flex items-start gap-4 mb-10">
-              <div className="bg-white rounded-[2rem] px-6 py-4 shadow-sm flex flex-col gap-4 border border-gray-100/50 flex-1 transition-all duration-300">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">{t.color}</span>
-                    <div className={`flex flex-wrap items-center gap-3 transition-all duration-300 ${isColorExpanded ? 'max-h-[200px]' : 'max-h-[32px] overflow-hidden'}`}>
-                      {usedColorGroups.map((groupName) => (
-                        <button
-                          key={groupName}
-                          onClick={() => {
-                            if (activeColorGroups.includes(groupName)) {
-                              setActiveColorGroups(activeColorGroups.filter(g => g !== groupName));
-                            } else {
-                              setActiveColorGroups([...activeColorGroups, groupName]);
-                            }
-                          }}
-                          title={groupName}
-                          className={`w-5 h-5 rounded-full transition-all flex-shrink-0 border-2 ${activeColorGroups.includes(groupName) ? 'border-gray-900 scale-110 shadow-md' : 'border-transparent hover:scale-125'}`}
-                          style={{ backgroundColor: groupToHex[groupName] }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {/* 展開按鈕 */}
-                  <button 
-                    onClick={() => setIsColorExpanded(!isColorExpanded)}
-                    className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-indigo-600 transition-all ml-4"
-                  >
-                    <ChevronDown className={`w-4 h-4 transition-transform ${isColorExpanded ? 'rotate-180' : ''}`} />
-                  </button>
+            <div className="flex items-center gap-3 mb-10">
+              <div className="flex items-center gap-2 bg-white rounded-xl px-4 h-11 shadow-sm border border-gray-100/50 flex-1">
+                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest mr-2">{t.color}</span>
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                  {usedColorGroups.map((groupName) => (
+                    <button
+                      key={groupName}
+                      onClick={() => {
+                        if (activeColorGroups.includes(groupName)) {
+                          setActiveColorGroups(activeColorGroups.filter(g => g !== groupName));
+                        } else {
+                          setActiveColorGroups([...activeColorGroups, groupName]);
+                        }
+                      }}
+                      title={groupName}
+                      className={`w-5 h-5 rounded-full transition-all flex-shrink-0 border-2 ${activeColorGroups.includes(groupName) ? 'border-gray-900 scale-110 shadow-md' : 'border-transparent hover:scale-125'}`}
+                      style={{ backgroundColor: groupToHex[groupName] }}
+                    />
+                  ))}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <CustomSelect 
-                  label={t.year}
-                  value={activeYear}
-                  options={[
-                    { label: t.all, value: null },
-                    ...Array.from(new Set(apps.map(app => new Date(app.releaseDate).getFullYear()))).sort((a, b) => (b as number) - (a as number)).map(year => ({ label: year.toString(), value: year }))
-                  ]}
-                  onChange={(val) => {
-                    setActiveYear(val);
-                    if (val) setActiveMonth(null);
-                  }}
-                  className="w-32"
-                />
-                <CustomSelect 
-                  label={t.month}
-                  value={activeMonth}
-                  options={[
-                    { label: t.all, value: null },
-                    ...Array.from({ length: 12 }, (_, i) => ({ 
-                      label: language === 'en' 
-                        ? new Date(2000, i).toLocaleString('en-US', { month: 'short' })
-                        : new Date(2000, i).toLocaleString('zh-CN', { month: 'short' }), 
-                      value: i + 1 
-                    }))
-                  ]}
-                  onChange={(val) => {
-                    setActiveMonth(val);
-                    if (val) setActiveYear(null);
-                  }}
-                  className="w-32"
-                />
-              </div>
+              <CustomSelect 
+                label={t.year}
+                value={activeYear}
+                options={[
+                  { label: t.all, value: null },
+                  ...Array.from(new Set(apps.map(app => new Date(app.releaseDate).getFullYear()))).sort((a, b) => (b as number) - (a as number)).map(year => ({ label: year.toString(), value: year }))
+                ]}
+                onChange={(val) => {
+                  setActiveYear(val);
+                  if (val) setActiveMonth(null);
+                }}
+                className="w-32"
+              />
+              <CustomSelect 
+                label={t.month}
+                value={activeMonth}
+                options={[
+                  { label: t.all, value: null },
+                  ...Array.from({ length: 12 }, (_, i) => ({ 
+                    label: language === 'en' 
+                      ? new Date(2000, i).toLocaleString('en-US', { month: 'short' })
+                      : new Date(2000, i).toLocaleString('zh-CN', { month: 'short' }), 
+                    value: i + 1 
+                  }))
+                ]}
+                onChange={(val) => {
+                  setActiveMonth(val);
+                  if (val) setActiveYear(null);
+                }}
+                className="w-32"
+              />
             </div>
 
             {/* 網格列表 */}
@@ -1517,214 +1530,252 @@ export default function App() {
           </>
         ) : activeTab === 'user-center' ? (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto pb-20">
-            <div className="flex items-center gap-4 mb-10">
-              <button 
-                onClick={() => setActiveTab('all')}
-                className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-gray-400 hover:text-indigo-600 transition-all"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-              <h2 className="text-4xl font-black text-gray-900 tracking-tight">{t.manageAccount}</h2>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Profile Card */}
-              <div className="lg:col-span-2 space-y-8">
-                <div className="bg-white rounded-[3rem] p-10 shadow-sm border border-gray-100/50 flex items-center gap-10 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 blur-[100px] rounded-full -mr-32 -mt-32"></div>
-                  <div className="relative z-10 w-32 h-32 rounded-[2.5rem] bg-indigo-100 flex items-center justify-center text-indigo-600 text-5xl font-black shadow-inner">
-                    {user?.nickname?.[0].toUpperCase() || user?.email?.[0].toUpperCase() || 'U'}
-                  </div>
-                  <div className="relative z-10 flex-1">
-                    <div className="flex items-center gap-4 mb-2">
-                      <h3 className="text-3xl font-black text-gray-900 tracking-tight">{user?.nickname}</h3>
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${isPro ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-100 text-gray-400'}`}>
-                        {isPro ? t.vip : t.free}
-                      </span>
-                    </div>
-                    <p className="text-gray-400 font-bold text-sm mb-4">{user?.email || user?.phone}</p>
-                    <div className="flex items-center gap-2 text-[10px] text-gray-300 font-black uppercase tracking-widest">
-                      <User className="w-3 h-3" /> {t.id}: #{user?.id}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Account Details */}
-                <div className="bg-white rounded-[3rem] p-10 shadow-sm border border-gray-100/50 space-y-8">
-                  <div className="flex items-center gap-3 mb-2">
-                    <ShieldCheck className="w-5 h-5 text-indigo-600" />
-                    <h4 className="text-xl font-black text-gray-900 tracking-tight">{t.security}</h4>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="p-6 bg-gray-50/50 rounded-[2rem] border border-gray-100 group hover:border-indigo-100 transition-all">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-gray-400 group-hover:text-indigo-600 transition-colors">
-                            <User className="w-5 h-5" />
-                          </div>
-                          <span className="text-xs font-black text-gray-400 uppercase tracking-widest">{t.nickname}</span>
-                        </div>
-                        <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">{t.edit}</button>
-                      </div>
-                      <p className="text-lg font-bold text-gray-900">{user?.nickname}</p>
-                    </div>
-
-                    <div className="p-6 bg-gray-50/50 rounded-[2rem] border border-gray-100 group hover:border-indigo-100 transition-all">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-gray-400 group-hover:text-indigo-600 transition-colors">
-                            <Mail className="w-5 h-5" />
-                          </div>
-                          <span className="text-xs font-black text-gray-400 uppercase tracking-widest">{t.email}</span>
-                        </div>
-                        <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">{t.edit}</button>
-                      </div>
-                      <p className="text-lg font-bold text-gray-900">{user?.email}</p>
-                    </div>
-
-                    <div className="p-6 bg-gray-50/50 rounded-[2rem] border border-gray-100 group hover:border-indigo-100 transition-all">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-gray-400 group-hover:text-indigo-600 transition-colors">
-                            <Phone className="w-5 h-5" />
-                          </div>
-                          <span className="text-xs font-black text-gray-400 uppercase tracking-widest">{t.phone}</span>
-                        </div>
-                        <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">{t.edit}</button>
-                      </div>
-                      <p className="text-lg font-bold text-gray-900">{user?.phone || 'Not set'}</p>
-                    </div>
-
-                    <div className="p-6 bg-gray-50/50 rounded-[2rem] border border-gray-100 group hover:border-indigo-100 transition-all">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-gray-400 group-hover:text-indigo-600 transition-colors">
-                            <Lock className="w-5 h-5" />
-                          </div>
-                          <span className="text-xs font-black text-gray-400 uppercase tracking-widest">{t.password}</span>
-                        </div>
-                        <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">{t.changePassword}</button>
-                      </div>
-                      <p className="text-lg font-bold text-gray-900">••••••••••••</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Billing History */}
-                <div className="bg-white rounded-[3rem] p-10 shadow-sm border border-gray-100/50">
-                  <div className="flex items-center gap-3 mb-8">
-                    <History className="w-5 h-5 text-indigo-600" />
-                    <h4 className="text-xl font-black text-gray-900 tracking-tight">{t.billingHistory}</h4>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="border-b border-gray-50">
-                          <th className="pb-4 text-[10px] font-black text-gray-300 uppercase tracking-widest">{t.date}</th>
-                          <th className="pb-4 text-[10px] font-black text-gray-300 uppercase tracking-widest">{t.plan}</th>
-                          <th className="pb-4 text-[10px] font-black text-gray-300 uppercase tracking-widest">{t.amount}</th>
-                          <th className="pb-4 text-[10px] font-black text-gray-300 uppercase tracking-widest">{t.status}</th>
-                          <th className="pb-4"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {paymentHistory.map((item) => (
-                          <tr key={item.id} className="group">
-                            <td className="py-6 text-sm font-bold text-gray-600">{item.date}</td>
-                            <td className="py-6 text-sm font-black text-gray-900">{item.plan}</td>
-                            <td className="py-6 text-sm font-black text-gray-900">{item.amount}</td>
-                            <td className="py-6">
-                              <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest border border-emerald-100">
-                                {item.status}
-                              </span>
-                            </td>
-                            <td className="py-6 text-right">
-                              <button className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
-                                <FileText className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+            <div className="flex items-center justify-between mb-10">
+              <div>
+                <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-2">{t.userCenter}</h2>
+                <p className="text-sm text-gray-400 font-medium">Manage your profile, security, and billing preferences.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${isPro ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-100 text-gray-400'}`}>
+                  {isPro ? t.vip : t.free}
                 </div>
               </div>
+            </div>
 
-              {/* Sidebar Info */}
-              <div className="space-y-8">
-                {/* Subscription Status */}
-                <div className="bg-[#15162B] rounded-[3rem] p-10 text-white relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-600/20 blur-[60px] rounded-full -mr-24 -mt-24"></div>
-                  <div className="relative z-10">
-                    <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-6">
-                      <Zap className={`w-6 h-6 ${isPro ? 'text-yellow-400 fill-yellow-400' : 'text-white/20'}`} />
+            <div className="flex gap-8 mb-10 border-b border-gray-100">
+              <button 
+                onClick={() => setActiveUserTab('usage')}
+                className={`pb-4 px-2 text-sm transition-all ${activeUserTab === 'usage' ? 'font-black text-indigo-600 border-b-2 border-indigo-600' : 'font-bold text-gray-400 hover:text-gray-600'}`}
+              >
+                {t.userSettings}
+              </button>
+              <button 
+                onClick={() => setActiveUserTab('payment')}
+                className={`pb-4 px-2 text-sm transition-all ${activeUserTab === 'payment' ? 'font-black text-indigo-600 border-b-2 border-indigo-600' : 'font-bold text-gray-400 hover:text-gray-600'}`}
+              >
+                {t.billingHistory}
+              </button>
+              <button 
+                onClick={() => setActiveUserTab('subscription')}
+                className={`pb-4 px-2 text-sm transition-all ${activeUserTab === 'subscription' ? 'font-black text-indigo-600 border-b-2 border-indigo-600' : 'font-bold text-gray-400 hover:text-gray-600'}`}
+              >
+                {t.subscription}
+              </button>
+            </div>
+
+            {activeUserTab === 'usage' ? (
+              <div className="grid grid-cols-1 gap-10">
+                <div className="space-y-8">
+                  <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-gray-100/50">
+                    <div className="flex items-center gap-8 mb-10">
+                      <div className="w-24 h-24 rounded-[2rem] bg-indigo-50 flex items-center justify-center text-indigo-600 text-4xl font-black shadow-inner">
+                        {user?.nickname?.[0].toUpperCase() || user?.email?.[0].toUpperCase() || 'U'}
+                      </div>
+                      <div>
+                        <button className="bg-black text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-800 transition-all mb-2">Change Avatar</button>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">JPG, GIF or PNG. Max size of 800K</p>
+                      </div>
                     </div>
-                    <h4 className="text-xl font-black mb-2 tracking-tight">{t.subscription}</h4>
-                    <p className="text-sm text-gray-400 font-medium mb-8">
-                      {isPro ? 'You are currently on the Pro Plan with all features unlocked.' : 'Upgrade to Pro to unlock advanced features and unlimited collections.'}
-                    </p>
-                    
-                    {!isPro ? (
-                      <button 
-                        onClick={() => setShowProModal(true)}
-                        className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20"
-                      >
-                        {t.upgradeToVIP}
-                      </button>
-                    ) : (
-                      <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Next Payment</span>
-                          <span className="text-sm font-black">Mar 26, 2027</span>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t.nickname}</label>
+                        <input 
+                          type="text" 
+                          value={user?.nickname} 
+                          className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t.email}</label>
+                        <input 
+                          type="email" 
+                          value={user?.email} 
+                          className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t.phone}</label>
+                        <input 
+                          type="text" 
+                          value={user?.phone || ''} 
+                          placeholder="Not set"
+                          className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t.password}</label>
+                        <div className="relative">
+                          <input 
+                            type="password" 
+                            value="••••••••••••" 
+                            disabled
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none"
+                          />
+                          <button className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">{t.edit}</button>
                         </div>
-                        <button className="w-full py-3 rounded-xl bg-white/10 text-white font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all">
-                          Manage Subscription
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t.language}</label>
+                        <button 
+                          onClick={toggleLanguage}
+                          className="w-full flex items-center justify-between p-4 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-all border border-gray-100 group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Globe className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                            <span className="text-sm font-bold text-gray-600">{language === 'en' ? 'English' : '繁體中文'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{t.switchLang}</span>
+                            <ChevronRight className="w-4 h-4 text-indigo-400" />
+                          </div>
                         </button>
                       </div>
-                    )}
+                    </div>
+
+                    <div className="mt-10 pt-10 border-t border-gray-50 flex justify-end gap-4">
+                      <button 
+                        onClick={() => {
+                          setIsLoggedIn(false);
+                          setUser({ email: '', nickname: '', id: '' });
+                          setActiveTab('categories');
+                        }}
+                        className="px-8 py-3.5 rounded-2xl text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"
+                      >
+                        {t.logout}
+                      </button>
+                      <button className="bg-indigo-600 text-white px-10 py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">{t.saveChanges}</button>
+                    </div>
                   </div>
                 </div>
-
-                {/* Language Settings */}
-                <div className="bg-white rounded-[3rem] p-10 shadow-sm border border-gray-100/50">
-                  <div className="flex items-center gap-3 mb-6">
-                    <Globe className="w-5 h-5 text-indigo-600" />
-                    <h4 className="text-lg font-black text-gray-900 tracking-tight">{t.language}</h4>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <button 
-                      onClick={() => setLanguage('zh')}
-                      className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${language === 'zh' ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'bg-gray-50 border-transparent text-gray-500 hover:bg-gray-100'}`}
-                    >
-                      <span className="text-sm font-bold">繁體中文</span>
-                      {language === 'zh' && <CheckCircle2 className="w-4 h-4" />}
-                    </button>
-                    <button 
-                      onClick={() => setLanguage('en')}
-                      className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${language === 'en' ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'bg-gray-50 border-transparent text-gray-500 hover:bg-gray-100'}`}
-                    >
-                      <span className="text-sm font-bold">English</span>
-                      {language === 'en' && <CheckCircle2 className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Logout */}
-                <button 
-                  onClick={() => {
-                    setIsLoggedIn(false);
-                    setUser({ email: '', nickname: '', id: '' });
-                    setActiveTab('all');
-                  }}
-                  className="w-full py-5 rounded-[2rem] bg-white border border-red-100 text-red-500 text-xs font-black uppercase tracking-widest hover:bg-red-50 transition-all active:scale-95 shadow-sm"
-                >
-                  {t.logout}
-                </button>
               </div>
-            </div>
+            ) : activeUserTab === 'payment' ? (
+              <div className="bg-white rounded-[3rem] p-10 shadow-sm border border-gray-100/50">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-gray-50">
+                        <th className="pb-6 text-[10px] font-black text-gray-300 uppercase tracking-widest">{t.date}</th>
+                        <th className="pb-6 text-[10px] font-black text-gray-300 uppercase tracking-widest">{t.transactionId}</th>
+                        <th className="pb-6 text-[10px] font-black text-gray-300 uppercase tracking-widest">{t.product}</th>
+                        <th className="pb-6 text-[10px] font-black text-gray-300 uppercase tracking-widest">{t.amount}</th>
+                        <th className="pb-6 text-[10px] font-black text-gray-300 uppercase tracking-widest">{t.status}</th>
+                        <th className="pb-6 text-[10px] font-black text-gray-300 uppercase tracking-widest text-right">{t.action}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {paymentHistory.map((item) => (
+                        <tr key={item.id} className="group hover:bg-gray-50/50 transition-colors">
+                          <td className="py-8 text-xs font-bold text-gray-400 italic">{new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                          <td className="py-8 text-[11px] font-black text-gray-900">#{item.id}-MS</td>
+                          <td className="py-8">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                <Zap className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-gray-900">{item.plan}</p>
+                                <p className="text-[10px] text-gray-400 font-bold">Monthly recurring billing</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-8 text-sm font-black text-gray-900">{item.amount}</td>
+                          <td className="py-8">
+                            <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+                              {item.status}
+                            </span>
+                          </td>
+                          <td className="py-8 text-right">
+                            <button className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
+                              <Download className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-[3rem] overflow-hidden shadow-sm border border-gray-100/50 flex flex-col md:flex-row min-h-[500px]">
+                {/* Left Side: Features */}
+                <div className="flex-1 bg-indigo-600 p-10 text-white">
+                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
+                    <Zap className="w-6 h-6 text-white fill-current" />
+                  </div>
+                  <h2 className="text-3xl font-black mb-4 tracking-tight">Go VIP</h2>
+                  <p className="text-indigo-100 text-sm font-medium mb-10 leading-relaxed">
+                    Unlock full potential with our premium features designed for power users.
+                  </p>
+                  <div className="space-y-4">
+                    {[
+                      t.limit === 'Limit' ? 'Up to 500 App Additions' : '最多添加 500 個應用',
+                      t.unlock + ' ' + t.features,
+                      t.unlock + ' ' + t.businessModel,
+                      t.branding,
+                      t.priority
+                    ].map((feature, i) => (
+                      <div key={i} className="flex items-center gap-3 text-sm font-bold">
+                        <CheckCircle2 className="w-5 h-5 text-indigo-300" />
+                        {feature}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right Side: Plans & Payment */}
+                <div className="flex-1 p-10 bg-white">
+                  <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest mb-6">{t.selectPlan}</h3>
+                  <div className="space-y-3 mb-8">
+                    {[
+                      { id: 'Monthly', price: '￥5', cycle: t.month },
+                      { id: 'Half Year', price: '￥20', cycle: language === 'en' ? '6 months' : '6 個月', discount: 'Save 33%', popular: true }
+                    ].map((plan) => (
+                      <div 
+                        key={plan.id}
+                        onClick={() => setSelectedPlan(plan.id)}
+                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all relative ${selectedPlan === plan.id ? 'border-indigo-600 bg-indigo-50/30' : 'border-gray-100 hover:border-indigo-100'}`}
+                      >
+                        {plan.popular && <div className="absolute -top-2 right-4 bg-red-500 text-white text-[7px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">{t.bestValue}</div>}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-black text-gray-900">{plan.id}</p>
+                            {plan.discount && <p className="text-[9px] text-indigo-600 font-bold">{plan.discount}</p>}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-black text-gray-900">{plan.price}</p>
+                            <p className="text-[9px] text-gray-400 font-bold">/{plan.cycle}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest mb-4">{t.paymentMethod}</h3>
+                  <div className="grid grid-cols-2 gap-3 mb-8">
+                    {['WeChat Pay', 'Alipay'].map(method => (
+                      <button 
+                        key={method}
+                        onClick={() => setSelectedPaymentMethod(method)}
+                        className={`py-3 rounded-xl border-2 text-[10px] font-black transition-all ${selectedPaymentMethod === method ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      setIsPro(true);
+                      setActiveUserTab('usage');
+                    }}
+                    className="w-full bg-black text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-800 transition-all active:scale-95 shadow-xl shadow-black/10"
+                  >
+                    {t.upgradeNow}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (activeTab === 'categories' || activeTab === 'collections') ? (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1917,6 +1968,10 @@ export default function App() {
                             if (newAppHexColors.includes(hex)) {
                               setNewAppHexColors(newAppHexColors.filter(c => c !== hex));
                             } else {
+                              if (newAppHexColors.length >= 6) {
+                                alert(language === 'en' ? 'You can select up to 6 colors.' : '您最多只能選擇 6 種顏色。');
+                                return;
+                              }
                               setNewAppHexColors([...newAppHexColors, hex]);
                             }
                           }}
@@ -2520,7 +2575,8 @@ export default function App() {
                           rating: newAppRating,
                           features: newAppFeatures,
                           businessModel: newAppBusinessModel,
-                          platformDownloads: newAppPlatformDownloads
+                          platformDownloads: newAppPlatformDownloads,
+                          ageText: calculateAge(newAppReleaseDate)
                         };
                       }
                       return app;
@@ -2542,7 +2598,7 @@ export default function App() {
                       bg: newAppHexColors.length > 0 ? `bg-[${newAppHexColors[0]}]` : 'bg-gray-900',
                       starred: false,
                       releaseDate: newAppReleaseDate,
-                      ageText: 'New',
+                      ageText: calculateAge(newAppReleaseDate),
                       isPro: false,
                       platforms: newAppPlatforms,
                       logo: newAppLogo,
@@ -3014,7 +3070,7 @@ export default function App() {
       <div className="fixed bottom-8 right-8 z-[60]">
         <button 
           onClick={() => setIsChatOpen(!isChatOpen)}
-          className="w-16 h-16 bg-indigo-600 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group relative overflow-hidden"
+          className="w-16 h-16 bg-indigo-600 rounded-2xl shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group relative overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <Sparkles className="w-8 h-8 text-white relative z-10" />
