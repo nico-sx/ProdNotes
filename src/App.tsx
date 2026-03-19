@@ -119,20 +119,20 @@ const extractColorsFromImage = (imageUrl: string): Promise<string[]> => {
 
 // === 模擬數據定義 ===
 const categories = [
-  { name: 'All', icon: LayoutGrid },
-  { name: 'Music', icon: Music },
-  { name: 'Food & Drink', icon: Coffee },
-  { name: 'Travel', icon: Plane },
-  { name: 'Entertainment', icon: Film },
-  { name: 'Productivity', icon: Briefcase },
-  { name: 'Health & Fitness', icon: HeartPulse },
-  { name: 'Reference', icon: Book },
-  { name: 'Utilities', icon: Wrench },
-  { name: 'Business', icon: Building2 },
-  { name: 'Social Networking', icon: Users },
-  { name: 'Games', icon: Gamepad2 },
-  { name: 'Shopping', icon: ShoppingBag },
-  { name: 'Lifestyle', icon: Shirt },
+  { id: 'all', name: 'All', icon: LayoutGrid },
+  { id: 'music', name: 'Music', icon: Music },
+  { id: 'food', name: 'Food & Drink', icon: Coffee },
+  { id: 'travel', name: 'Travel', icon: Plane },
+  { id: 'ent', name: 'Entertainment', icon: Film },
+  { id: 'prod', name: 'Productivity', icon: Briefcase },
+  { id: 'health', name: 'Health & Fitness', icon: HeartPulse },
+  { id: 'ref', name: 'Reference', icon: Book },
+  { id: 'util', name: 'Utilities', icon: Wrench },
+  { id: 'biz', name: 'Business', icon: Building2 },
+  { id: 'social', name: 'Social Networking', icon: Users },
+  { id: 'games', name: 'Games', icon: Gamepad2 },
+  { id: 'shop', name: 'Shopping', icon: ShoppingBag },
+  { id: 'life', name: 'Lifestyle', icon: Shirt },
 ];
 
 const categoryTranslations: Record<string, Record<string, string>> = {
@@ -190,7 +190,7 @@ const colors = [
 
 const initialApps = [
   {
-    id: 1, name: 'Cron Calendar', category: 'Productivity',
+    id: 1, name: 'Cron Calendar', category: 'Productivity', collections: [],
     description: 'Next-generation calendar for professionals and teams.',
     tags: ['Calendar', 'Startup', 'SaaS', 'Workflow'],
     downloadsNum: 85200, downloadsText: '85.2 Thousand', rating: '4.9',
@@ -209,7 +209,7 @@ const initialApps = [
     }
   },
   {
-    id: 2, name: 'Notion', category: 'Productivity',
+    id: 2, name: 'Notion', category: 'Productivity', collections: [],
     description: 'The all-in-one workspace for your notes, tasks, wikis, and databases.',
     tags: ['Notes', 'Wiki', 'Collaboration'],
     downloadsNum: 150000000, downloadsText: '150.0 B', rating: '4.9',
@@ -228,7 +228,7 @@ const initialApps = [
     }
   },
   {
-    id: 3, name: 'Sparkles', category: 'Entertainment',
+    id: 3, name: 'Sparkles', category: 'Entertainment', collections: [],
     description: 'Add magic to your daily photos with AI-powered sparkles.',
     tags: ['AI', 'Photo', 'Social'],
     downloadsNum: 100200000, downloadsText: '100.2 M', rating: '4.8',
@@ -247,7 +247,7 @@ const initialApps = [
     }
   },
   {
-    id: 4, name: 'Zapier', category: 'Utilities',
+    id: 4, name: 'Zapier', category: 'Utilities', collections: [],
     description: 'Automate your workflows by connecting your favorite apps.',
     tags: ['Automation', 'No-code'],
     downloadsNum: 50000, downloadsText: '50.0 K', rating: '4.7',
@@ -426,7 +426,7 @@ export default function App() {
   const [newCategoryIcon, setNewCategoryIcon] = useState<any>(LayoutGrid);
   const [selectedAppIdsForCategory, setSelectedAppIdsForCategory] = useState<number[]>([]);
   const [showProModal, setShowProModal] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState('3 Years');
+  const [selectedPlan, setSelectedPlan] = useState('Free');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('WeChat Pay');
   const [categoryAppSearchQuery, setCategoryAppSearchQuery] = useState('');
   const [editingApp, setEditingApp] = useState<any>(null); // 正在編輯的 App
@@ -434,7 +434,7 @@ export default function App() {
 
   // === Auth & Language States ===
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<{ email?: string, phone?: string, nickname?: string, id?: string }>({ email: 'user@example.com', nickname: 'Design Enthusiast', id: '8520' });
+  const [user, setUser] = useState<{ email?: string, phone?: string, nickname?: string, id?: string, membershipExpiry?: string }>({ email: 'user@example.com', nickname: 'Design Enthusiast', id: '8520', membershipExpiry: '2027-02-26' });
   const [paymentHistory] = useState([
     { id: 'INV-001', date: '2024-02-26', plan: 'Pro Plan (3 Years)', amount: '$199.00', status: 'Paid' },
     { id: 'INV-002', date: '2021-02-26', plan: 'Pro Plan (3 Years)', amount: '$199.00', status: 'Paid' },
@@ -755,23 +755,35 @@ export default function App() {
     }, 1000);
   };
 
+  const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
+
   // 處理分類/組合 CRUD
   const handleAddGroup = () => {
     if (!newCategoryName.trim()) return;
     const newGroup = {
+      id: Math.random().toString(36).substr(2, 9),
       name: newCategoryName,
-      icon: newCategoryIcon
+      icon: newCategoryIcon,
+      parentId: activeTab === 'categories' ? newCategoryParentId : null
     };
 
     const isCollection = activeTab === 'collections';
 
     // 更新 App 的分類/組合
     if (selectedAppIdsForCategory.length > 0) {
-      setApps(apps.map(app => 
-        selectedAppIdsForCategory.includes(app.id) 
-          ? { ...app, [isCollection ? 'collection' : 'category']: newCategoryName } 
-          : app
-      ));
+      setApps(apps.map(app => {
+        if (selectedAppIdsForCategory.includes(app.id)) {
+          if (isCollection) {
+            const currentCollections = app.collections || [];
+            if (!currentCollections.includes(newCategoryName)) {
+              return { ...app, collections: [...currentCollections, newCategoryName] };
+            }
+          } else {
+            return { ...app, category: newCategoryName };
+          }
+        }
+        return app;
+      }));
     }
 
     if (isCollection) {
@@ -783,6 +795,7 @@ export default function App() {
     setIsAddingCategory(false);
     setNewCategoryName('');
     setNewCategoryIcon(LayoutGrid);
+    setNewCategoryParentId(null);
     setSelectedAppIdsForCategory([]);
     setCategoryAppSearchQuery('');
   };
@@ -791,24 +804,44 @@ export default function App() {
     if (!editingCategory || !newCategoryName.trim()) return;
     
     const isCollection = activeTab === 'collections';
-    const field = isCollection ? 'collection' : 'category';
 
     // 更新 App 的分類/組合 (如果名稱改變)
     if (editingCategory.name !== newCategoryName) {
-      setApps(apps.map(app => 
-        app[field] === editingCategory.name 
-          ? { ...app, [field]: newCategoryName } 
-          : app
-      ));
+      setApps(apps.map(app => {
+        if (isCollection) {
+          const currentCollections = app.collections || [];
+          if (currentCollections.includes(editingCategory.name)) {
+            return { ...app, collections: currentCollections.map(c => c === editingCategory.name ? newCategoryName : c) };
+          }
+        } else {
+          if (app.category === editingCategory.name) {
+            return { ...app, category: newCategoryName };
+          }
+        }
+        return app;
+      }));
     }
 
     // 更新選中的 App 分類/組合 (包含取消選中的)
     setApps(prevApps => prevApps.map(app => {
       if (selectedAppIdsForCategory.includes(app.id)) {
-        return { ...app, [field]: newCategoryName };
-      } else if (app[field] === editingCategory.name) {
-        // 如果原本在這個分類/組合中，但現在沒被選中，則清除
-        return { ...app, [field]: undefined };
+        if (isCollection) {
+          const currentCollections = app.collections || [];
+          if (!currentCollections.includes(newCategoryName)) {
+            return { ...app, collections: [...currentCollections, newCategoryName] };
+          }
+        } else {
+          return { ...app, category: newCategoryName };
+        }
+      } else {
+        if (isCollection) {
+          const currentCollections = app.collections || [];
+          if (currentCollections.includes(newCategoryName)) {
+            return { ...app, collections: currentCollections.filter(c => c !== newCategoryName) };
+          }
+        } else if (app.category === newCategoryName) {
+          return { ...app, category: undefined };
+        }
       }
       return app;
     }));
@@ -823,7 +856,7 @@ export default function App() {
     } else {
       const updatedList = categoriesList.map(cat => 
         cat.name === editingCategory.name 
-          ? { ...cat, name: newCategoryName, icon: newCategoryIcon }
+          ? { ...cat, name: newCategoryName, icon: newCategoryIcon, parentId: newCategoryParentId }
           : cat
       );
       setCategoriesList(updatedList);
@@ -832,6 +865,7 @@ export default function App() {
     setEditingCategory(null);
     setNewCategoryName('');
     setNewCategoryIcon(LayoutGrid);
+    setNewCategoryParentId(null);
     setSelectedAppIdsForCategory([]);
     setCategoryAppSearchQuery('');
   };
@@ -899,11 +933,26 @@ export default function App() {
     const list = activeTab === 'collections' ? collectionsList : categoriesList;
     const sortOption = activeTab === 'collections' ? collectionSortOption : categorySortOption;
     
-    return [...list].sort((a, b) => {
+    let sorted = [...list].sort((a, b) => {
       if (sortOption === 'name-asc') return a.name.localeCompare(b.name);
       if (sortOption === 'name-desc') return b.name.localeCompare(a.name);
       return 0;
     });
+
+    if (activeTab === 'categories') {
+      const roots = sorted.filter(c => !c.parentId);
+      const result: any[] = [];
+      roots.forEach(root => {
+        result.push(root);
+        const children = sorted.filter(c => c.parentId === root.id);
+        children.forEach(child => {
+          result.push({ ...child, isSub: true });
+        });
+      });
+      return result;
+    }
+
+    return sorted;
   }, [activeTab, categoriesList, collectionsList, categorySortOption, collectionSortOption]);
 
   const maxApps = isPro ? 500 : 50;
@@ -926,7 +975,7 @@ export default function App() {
       });
     }
     if (activeCategory !== 'All') {
-      result = result.filter(app => app.category === activeCategory || app.collection === activeCategory);
+      result = result.filter(app => app.category === activeCategory || (app.collections || []).includes(activeCategory));
     }
     if (activeColorGroups.length > 0) {
       result = result.filter(app => 
@@ -997,7 +1046,7 @@ export default function App() {
                 <div className="absolute w-4 h-4 bg-black rounded-full top-1 left-1"></div>
                 <span className="relative text-white font-bold text-lg leading-none z-10">P</span>
               </div>
-              <h1 className="font-bold text-xl tracking-tight">ProdNote</h1>
+              <h1 className="font-bold text-xl tracking-tight">ProdNotes</h1>
             </div>
             <div className="flex items-center gap-4">
               <button 
@@ -1305,6 +1354,15 @@ export default function App() {
             <Layers className={`w-4 h-4 ${activeTab === 'collections' ? 'text-indigo-600' : ''}`} /> {t.collections}
           </button>
           <button 
+            onClick={() => {
+              setActiveTab('all');
+              setActiveCategory('All');
+            }}
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors w-full text-left text-sm font-medium ${activeTab === 'all' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-500 hover:bg-gray-50'}`}
+          >
+            <LayoutGrid className={`w-4 h-4 ${activeTab === 'all' ? 'text-indigo-600' : ''}`} /> {t.all}
+          </button>
+          <button 
             onClick={() => setActiveTab('categories')}
             className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors w-full text-left text-sm font-medium ${activeTab === 'categories' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-500 hover:bg-gray-50'}`}
           >
@@ -1313,14 +1371,14 @@ export default function App() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-0.5 custom-scrollbar">
-          {activeTab !== 'all' && activeTab !== 'user-center' && (activeTab === 'collections' ? collectionsList : categoriesList).filter(cat => cat.name !== 'All' && ((groupCounts[cat.name] || 0) > 0 || (activeTab === 'collections' && (groupCounts[`col_${cat.name}`] || 0) > 0))).map((cat) => (
+          {activeTab !== 'user-center' && (activeTab === 'collections' ? collectionsList : categoriesList).filter(cat => cat.name === 'All' || (groupCounts[cat.name] || 0) > 0 || (activeTab === 'collections' && (groupCounts[`col_${cat.name}`] || 0) > 0)).map((cat) => (
             <button
               key={cat.name}
               onClick={() => {
                 setActiveCategory(cat.name);
-                // Stay on current tab
+                setActiveTab('all');
               }}
-              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-colors text-sm ${activeCategory === cat.name ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-500 hover:bg-gray-50'
+              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-colors text-sm ${activeTab === 'all' && activeCategory === cat.name ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-500 hover:bg-gray-50'
                 }`}
             >
               <div className="flex items-center gap-3">
@@ -1616,6 +1674,13 @@ export default function App() {
                         </div>
                       </div>
                       <div className="space-y-2 md:col-span-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Membership Expiry</label>
+                        <div className="w-full bg-indigo-50 border border-indigo-100 rounded-2xl px-5 py-3.5 text-sm font-bold text-indigo-600 flex items-center gap-3">
+                          <Calendar className="w-4 h-4" />
+                          <span>{user?.membershipExpiry || 'No active subscription'}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{t.language}</label>
                         <button 
                           onClick={toggleLanguage}
@@ -1703,18 +1768,22 @@ export default function App() {
                   <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
                     <Zap className="w-6 h-6 text-white fill-current" />
                   </div>
-                  <h2 className="text-3xl font-black mb-4 tracking-tight">Go VIP</h2>
+                  <h2 className="text-3xl font-black mb-4 tracking-tight">{selectedPlan === 'Free' ? 'Free Plan' : 'Go VIP'}</h2>
                   <p className="text-indigo-100 text-sm font-medium mb-10 leading-relaxed">
-                    Unlock full potential with our premium features designed for power users.
+                    {selectedPlan === 'Free' ? 'Basic features for personal use.' : 'Unlock full potential with our premium features designed for power users.'}
                   </p>
                   <div className="space-y-4">
-                    {[
+                    {(selectedPlan === 'Free' ? [
+                      t.limit === 'Limit' ? 'Up to 50 App Additions' : '最多添加 50 個應用',
+                      'Basic App Details',
+                      'Standard Support'
+                    ] : [
                       t.limit === 'Limit' ? 'Up to 500 App Additions' : '最多添加 500 個應用',
                       t.unlock + ' ' + t.features,
                       t.unlock + ' ' + t.businessModel,
                       t.branding,
                       t.priority
-                    ].map((feature, i) => (
+                    ]).map((feature, i) => (
                       <div key={i} className="flex items-center gap-3 text-sm font-bold">
                         <CheckCircle2 className="w-5 h-5 text-indigo-300" />
                         {feature}
@@ -1728,6 +1797,7 @@ export default function App() {
                   <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest mb-6">{t.selectPlan}</h3>
                   <div className="space-y-3 mb-8">
                     {[
+                      { id: 'Free', price: '￥0', cycle: 'forever' },
                       { id: 'Monthly', price: '￥5', cycle: t.month },
                       { id: 'Half Year', price: '￥20', cycle: language === 'en' ? '6 months' : '6 個月', discount: 'Save 33%', popular: true }
                     ].map((plan) => (
@@ -1819,10 +1889,11 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {sortedGroups.map((cat) => (
                 <div 
-                  key={cat.name} 
+                  key={cat.id || cat.name} 
                   onClick={() => setPreviewingGroup(cat)}
-                  className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100/50 group hover:shadow-xl transition-all duration-300 relative overflow-hidden cursor-pointer"
+                  className={`bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100/50 group hover:shadow-xl transition-all duration-300 relative overflow-hidden cursor-pointer ${cat.isSub ? 'ml-8 scale-95 opacity-80' : ''}`}
                 >
+                  {cat.isSub && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-100"></div>}
                   <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     <button 
                       onClick={(e) => {
@@ -1830,10 +1901,11 @@ export default function App() {
                         setEditingCategory(cat);
                         setNewCategoryName(cat.name);
                         setNewCategoryIcon(cat.icon);
+                        setNewCategoryParentId(cat.parentId || null);
                         setCategoryAppSearchQuery('');
                         // 找出屬於該分類/組合的 App ID
-                        const field = activeTab === 'collections' ? 'collection' : 'category';
-                        const appIds = apps.filter(a => a[field] === cat.name).map(a => a.id);
+                        const isCollection = activeTab === 'collections';
+                        const appIds = apps.filter(a => isCollection ? (a.collections || []).includes(cat.name) : a.category === cat.name).map(a => a.id);
                         setSelectedAppIdsForCategory(appIds);
                       }}
                       className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
